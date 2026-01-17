@@ -3,6 +3,11 @@ const axios = require('axios');
 let globalCache = {};
 const CACHE_DURATION = 5 * 60 * 1000; 
 
+const HEADERS = {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*"
+};
+
 exports.handler = async (event) => {
     const API_KEY = process.env.FINNHUB_KEY;
     const SHEET_ID = process.env.SHEET_ID;
@@ -18,7 +23,7 @@ exports.handler = async (event) => {
     if (tickers.length === 0) {
         return {
             statusCode: 200,
-            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+            headers: HEADERS,
             body: JSON.stringify({ sheetId: SHEET_ID, prices: [] })
         };
     }
@@ -29,7 +34,7 @@ exports.handler = async (event) => {
     if (globalCache[cacheKey] && (now - globalCache[cacheKey].time < CACHE_DURATION)) {
         return { 
             statusCode: 200, 
-            headers: { "Content-Type": "application/json" },
+            headers: HEADERS,
             body: JSON.stringify({ prices: globalCache[cacheKey].data, sheetId: SHEET_ID, cached: true })
         };
     }
@@ -38,18 +43,23 @@ exports.handler = async (event) => {
         const requests = tickers.map(symbol => 
             axios.get(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${API_KEY}`)
         );
-        const responses = await Promise.all(requests);
-        const data = responses.map((r, i) => ({
-            ticker: tickers[i],
-            price: r.data?.c || 0,
-            dp: r.data?.dp || 0
-        }));
+        const results = await Promise.allSettled(requests);
+        const data = results.map((result, i) => {
+            if (result.status === 'fulfilled') {
+                return {
+                    ticker: tickers[i],
+                    price: result.value.data?.c || 0,
+                    dp: result.value.data?.dp || 0
+                };
+            }
+            return { ticker: tickers[i], price: 0, dp: 0 };
+        });
 
         globalCache[cacheKey] = { data: data, time: now };
 
         return { 
             statusCode: 200, 
-            headers: { "Content-Type": "application/json" },
+            headers: HEADERS,
             body: JSON.stringify({ prices: data, sheetId: SHEET_ID, cached: false })
         };
     } catch (error) {
