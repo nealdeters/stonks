@@ -2,7 +2,7 @@
   { "name": "Kyle Hendrix", "stockName": "Advanced Micro Devices", "ticker": "AMD", "capital": 5000.00, "cost": 109.8600, "shares": 45.512 },
   { "name": "Keagan Boll", "stockName": "Alibaba Group Holding Ltd - ADR", "ticker": "BABA", "capital": 5000.00, "cost": 96.7500, "shares": 51.680 },
   { "name": "Laura Schmidt", "stockName": "Nvidia", "ticker": "NVDA", "capital": 5000.00, "cost": 121.2400, "shares": 41.241 },
-  { "name": "Christo Schultz", "stockName": "Vertiv Holding Co", "ticker": "VRTR", "capital": 5000.00, "cost": 107.7800, "shares": 46.391 },
+  { "name": "Christo Schultz", "stockName": "Vertiv Holding Co", "ticker": "VRT", "capital": 5000.00, "cost": 107.7800, "shares": 46.391 },
   { "name": "Kelly Schultz", "stockName": "Intel Corp", "ticker": "INTC", "capital": 5000.00, "cost": 23.5600, "shares": 212.224 },
   { "name": "Bill Herman", "stockName": "Rush Street Interactive Inc.", "ticker": "RSI", "capital": 5000.00, "cost": 14.2500, "shares": 350.877 },
   { "name": "Emmie Schultz", "stockName": "Exelixis Inc", "ticker": "EXEL", "capital": 5000.00, "cost": 34.9400, "shares": 143.102 },

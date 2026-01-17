@@ -7,16 +7,21 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-white min-h-screen p-4 md:p-8">
-
     <div class="max-w-7xl mx-auto">
         <header class="mb-8 flex justify-between items-end">
             <div>
-                <h1 class="text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 uppercase">
+                <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 uppercase">
                     Schultz Stock Contest <span class="current-year"></span>
                 </h1>
-                <p class="text-slate-500 font-medium">Real-time Performance Leaderboard</p>
+                <div class="flex items-center gap-2 mt-1">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Market Live (5m Sync)</p>
+                </div>
             </div>
-            <div id="last-updated" class="text-xs text-slate-600 hidden md:block"></div>
+            <div id="last-updated" class="text-[10px] text-slate-600 hidden md:block uppercase tracking-widest"></div>
         </header>
 
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -28,12 +33,12 @@
                 <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Market Value</p>
                 <p id="stat-value" class="text-xl font-bold">$0</p>
             </div>
-            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-2xl">
+            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-2xl text-center">
                 <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Overall Gain</p>
                 <p id="stat-gain" class="text-xl font-bold">0.00%</p>
             </div>
-            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-2xl">
-                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Current Leader</p>
+            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-2xl text-right">
+                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Leader</p>
                 <p id="stat-leader" class="text-xl font-bold text-emerald-400">---</p>
             </div>
         </div>
@@ -43,129 +48,18 @@
                 <table class="w-full text-left border-collapse block md:table">
                     <thead class="bg-slate-900/50 text-slate-400 text-[10px] uppercase font-bold tracking-wider hidden md:table-header-group">
                         <tr>
-                            <th class="px-6 py-4">Rank & Participant</th>
-                            <th class="px-6 py-4 text-center">Stock / Sym</th>
-                            <th class="px-6 py-4 text-right">Investment Info</th>
-                            <th class="px-6 py-4 text-right">Live Metrics</th>
-                            <th class="px-6 py-4 text-right">Total Return</th>
+                            <th class="px-6 py-4">Participant</th>
+                            <th class="px-6 py-4 text-center">Stock</th>
+                            <th class="px-6 py-4 text-right">Investment</th>
+                            <th class="px-6 py-4 text-right">Market</th>
+                            <th class="px-6 py-4 text-right">Return</th>
                         </tr>
                     </thead>
-                    <tbody id="leaderboard-body" class="block md:table-row-group divide-y divide-slate-700/50">
-                        </tbody>
+                    <tbody id="leaderboard-body" class="block md:table-row-group divide-y divide-slate-700/50"></tbody>
                 </table>
             </div>
         </div>
     </div>
-
-    <script>
-        async function initApp() {
-            updateDynamicYear()
-            const container = document.getElementById('leaderboard-body');
-            if (!container) return;
-
-            try {
-                const response = await fetch('./src/data/participants.json');
-                const participants = await response.json();
-
-                const tickers = participants.map(p => p.ticker).join(',');
-                const priceResponse = await fetch(`/.netlify/functions/get-prices?tickers=${tickers}`);
-                const livePrices = await priceResponse.json();
-
-                const results = participants.map(p => {
-                    const live = livePrices.find(l => l.ticker === p.ticker);
-                    const currentPrice = live?.price || 0;
-                    const marketValue = p.shares * currentPrice;
-                    const gainLoss = marketValue - (p.shares * p.cost);
-                    const gainPct = live ? ((currentPrice - p.cost) / p.cost) * 100 : 0;
-                    return { ...p, currentPrice, marketValue, gainLoss, gainPct };
-                }).sort((a, b) => b.gainPct - a.gainPct);
-
-                renderLeaderboard(results);
-                updateStats(results);
-            } catch (err) {
-                console.error("App Initialization Failed:", err);
-            }
-        }
-
-        function updateDynamicYear() {
-            const currentYear = new Date().getFullYear(); // Captures 2026, 2027, etc.
-            document.querySelectorAll('.current-year').forEach(el => {
-                el.innerText = currentYear;
-            });
-        }
-
-        function renderLeaderboard(results) {
-            const container = document.getElementById('leaderboard-body');
-            container.innerHTML = results.map((res, index) => `
-                <tr class="block md:table-row hover:bg-slate-700/20 transition-all">
-                    <td class="px-6 py-4 block md:table-cell">
-                        <div class="flex items-center gap-3">
-                            <span class="text-xs font-mono text-slate-500">#${index + 1}</span>
-                            <div>
-                                <p class="font-bold text-white text-base md:text-sm">${res.name}</p>
-                                <p class="text-[10px] text-slate-500 uppercase md:hidden">Participant</p>
-                            </div>
-                        </div>
-                    </td>
-
-                    <td class="px-6 py-2 md:py-4 block md:table-cell text-left md:text-center">
-                        <div class="inline-flex flex-col md:items-center">
-                            <span class="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded text-[10px] font-black tracking-widest">${res.ticker}</span>
-                            <span class="text-[10px] text-slate-400 mt-1 hidden md:block">${res.stockName || 'Stock'}</span>
-                        </div>
-                    </td>
-
-                    <td class="px-6 py-2 md:py-4 block md:table-cell text-left md:text-right border-t border-slate-700/30 md:border-none">
-                        <div class="flex justify-between md:block">
-                            <span class="text-slate-500 text-[10px] uppercase font-bold md:hidden">Investment</span>
-                            <div>
-                                <p class="text-xs font-medium text-slate-300">$${(res.shares * res.cost).toLocaleString()}</p>
-                                <p class="text-[10px] text-slate-500 italic">${res.shares.toFixed(2)} @ $${res.cost.toFixed(2)}</p>
-                            </div>
-                        </div>
-                    </td>
-
-                    <td class="px-6 py-2 md:py-4 block md:table-cell text-left md:text-right">
-                        <div class="flex justify-between md:block">
-                            <span class="text-slate-500 text-[10px] uppercase font-bold md:hidden">Live Value</span>
-                            <div>
-                                <p class="text-xs font-bold text-white">$${res.marketValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
-                                <p class="text-[10px] text-slate-500 italic">Price: $${res.currentPrice.toFixed(2)}</p>
-                            </div>
-                        </div>
-                    </td>
-
-                    <td class="px-6 py-4 block md:table-cell text-left md:text-right bg-slate-700/10 md:bg-transparent">
-                        <div class="flex justify-between md:block items-center">
-                            <span class="text-slate-500 text-[10px] uppercase font-bold md:hidden">Total Return</span>
-                            <div class="text-right">
-                                <p class="text-lg md:text-sm font-black ${res.gainPct >= 0 ? 'text-emerald-400' : 'text-red-400'}">
-                                    ${res.gainPct >= 0 ? '+' : ''}${res.gainPct.toFixed(2)}%
-                                </p>
-                                <p class="text-[10px] font-bold ${res.gainPct >= 0 ? 'text-emerald-600' : 'text-red-600'}">
-                                    ${res.gainLoss >= 0 ? '+' : '-'}$${Math.abs(res.gainLoss).toFixed(2)}
-                                </p>
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        function updateStats(results) {
-            const totalCap = results.reduce((s, r) => s + (r.shares * r.cost), 0);
-            const totalVal = results.reduce((s, r) => s + r.marketValue, 0);
-            const totalPct = ((totalVal - totalCap) / totalCap) * 100;
-
-            document.getElementById('stat-capital').innerText = `$${totalCap.toLocaleString()}`;
-            document.getElementById('stat-value').innerText = `$${totalVal.toLocaleString()}`;
-            document.getElementById('stat-gain').innerText = `${totalPct.toFixed(2)}%`;
-            document.getElementById('stat-gain').className = `text-xl font-bold ${totalPct >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
-            document.getElementById('stat-leader').innerText = results[0].name;
-            document.getElementById('last-updated').innerText = `Sync: ${new Date().toLocaleTimeString()}`;
-        }
-
-        document.addEventListener('DOMContentLoaded', initApp);
-    </script>
+    <script src="src/app.js"></script>
 </body>
 </html>
