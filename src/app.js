@@ -1,6 +1,14 @@
-const CURRENCY_FORMAT = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+/**
+ * STONKS - ENGINE
+ */
+
+// --- GLOBAL CONFIG ---
+const DATA_SOURCE = 'SHEETS'; // Switch to 'LOCAL' for a quick rollback
 const UPDATE_INTERVAL = 5 * 60 * 1000;
-let currentPrizes = {}; 
+const CURRENCY_FORMAT = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+
+let currentPrizes = {};
+
 
 const PRIZE_STYLES = {
     0: "bg-amber-500/20 text-amber-500 border-amber-500/50",
@@ -9,26 +17,84 @@ const PRIZE_STYLES = {
     "last": "bg-red-500/20 text-red-400 border-red-500/50"
 };
 
+/**
+ * ADAPTER 1: Google Sheets Source
+ */
+async function getGoogleSheetsData(id) {
+    const fetchTab = async (tab) => {
+        const url = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=${tab}`;
+        const res = await fetch(url);
+        const text = await res.text();
+        const json = JSON.parse(text.substring(47).slice(0, -2));
+        const headers = json.table.cols.map(col => col.label.toLowerCase().replace(/\s/g, ''));
+        return json.table.rows.map(row => {
+            const item = {};
+            row.c.forEach((cell, i) => { if (headers[i]) item[headers[i]] = cell ? cell.v : null; });
+            return item;
+        });
+    };
+
+    const [participants, rawPrizes, rawBenchmarks] = await Promise.all([
+        fetchTab('Participants'),
+        fetchTab('Prizes'),
+        fetchTab('Benchmarks')
+    ]);
+
+    const prizes = { benchmarks: {} };
+
+    rawPrizes.forEach(p => {
+        // Only process if 'rank' has a value
+        if (p.rank !== null && p.rank !== undefined) {
+            prizes[p.rank.toString()] = { 
+                emoji: p.emoji || '💰', // Fallback emoji
+                amount: p.amount || '$0.00' 
+            };
+        }
+    });
+    rawBenchmarks.forEach(b => prizes.benchmarks[b.ticker] = { name: b.name, startPrice: b.startprice });
+
+    return { participants, prizes };
+}
+
+/**
+ * ADAPTER 2: Local JSON Source (Rollback)
+ */
+async function getLocalData() {
+    const [pRes, prizeRes] = await Promise.all([
+        fetch('/src/data/participants.json'),
+        fetch('/src/data/prizes.json')
+    ]);
+    return { participants: await pRes.json(), prizes: await prizeRes.json() };
+}
+
 const initApp = async () => {
     updateDynamicYear();
     updateMarketStatus();
-    
+
     try {
-        const [participantsRes, prizesRes] = await Promise.all([
-            fetch('/src/data/participants.json'),
-            fetch('/src/data/prizes.json')
-        ]);
+        // STEP 1: Securely get the ID from your "Bridge" (Netlify Function)
+        const configResponse = await fetch('/.netlify/functions/get-prices?tickers=SPY');
+        const { sheetId } = await configResponse.json();
 
-        const participants = await participantsRes.json();
-        currentPrizes = await prizesRes.json();
+        if (!sheetId && DATA_SOURCE === 'SHEETS') {
+            throw new Error("SHEET_ID not found in Netlify Environment Variables.");
+        }
 
-        const tickers = [...participants.map(p => p.ticker), 'SPY', 'QQQ'].join(',');
-        const priceResponse = await fetch(`/.netlify/functions/get-prices?tickers=${tickers}`);
-        const livePrices = await priceResponse.json();
+        // STEP 2: Fetch Contest Data using the dynamic ID
+        const data = (DATA_SOURCE === 'SHEETS') 
+            ? await getGoogleSheetsData(sheetId) 
+            : await getLocalData();
 
+        currentPrizes = data.prizes;
+
+        // STEP 3: Proceed with fetching all prices
+        const allTickers = [...data.participants.map(p => p.ticker), 'SPY', 'QQQ'].join(',');
+        const priceRes = await fetch(`/.netlify/functions/get-prices?tickers=${allTickers}`);
+        const { prices: livePrices } = await priceRes.json();
+
+        // ... Logic & Rendering ...
         updateBenchmarks(livePrices);
-
-        const results = participants.map(p => {
+        const results = data.participants.map(p => {
             const live = livePrices.find(l => l.ticker === p.ticker);
             const currentPrice = live?.price || 0;
             return {
@@ -46,48 +112,22 @@ const initApp = async () => {
         updateTopMover(results);
 
     } catch (err) {
-        console.error("Dashboard Sync Failed:", err);
+        console.error("Critical System Failure:", err);
     }
 };
-
-function updateMarketStatus() {
-    const now = new Date();
-    const nyTime = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'America/New_York', hour: 'numeric', hour12: false
-    }).format(now);
-    
-    const hour = parseInt(nyTime);
-    const day = now.getDay();
-    const isWeekend = day === 0 || day === 6;
-    const isOpen = !isWeekend && hour >= 9 && hour < 16;
-
-    const dot = document.getElementById('status-dot');
-    const text = document.getElementById('status-text');
-
-    if (isWeekend) {
-        dot.className = "h-2 w-2 rounded-full bg-red-500";
-        text.innerText = "Market Closed (Weekend)";
-    } else if (!isOpen) {
-        dot.className = "h-2 w-2 rounded-full bg-amber-500 animate-pulse";
-        text.innerText = "Market Closed (After Hours)";
-    } else {
-        dot.className = "h-2 w-2 rounded-full bg-emerald-500 animate-ping";
-        text.innerText = "Market Open (Trading Active)";
-    }
-}
 
 function updateBenchmarks(livePrices) {
     const config = currentPrizes.benchmarks;
     if (!config) return;
-
     ['SPY', 'QQQ'].forEach(ticker => {
         const live = livePrices.find(l => l.ticker === ticker);
-        const start = config[ticker].startPrice;
+        const start = config[ticker]?.startPrice;
         if (live && start) {
             const pct = ((live.price - start) / start) * 100;
             const el = document.getElementById(`bench-${ticker.toLowerCase()}`);
             const color = pct >= 0 ? 'text-emerald-400' : 'text-red-400';
-            el.innerHTML = `<span class="${color} font-black">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</span>`;
+            el.innerHTML = `<span class="${color} font-black">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</span>
+                            <span class="block text-[8px] text-slate-500 font-mono mt-1">$${live.price.toFixed(2)}</span>`;
         }
     });
 }
@@ -106,11 +146,11 @@ function renderLeaderboard(results) {
                 </div>
             </td>
             <td class="px-8 py-3 md:py-5 block md:table-cell text-left md:text-center border-t border-slate-700/10 md:border-none">
-                <div class="flex justify-between items-center md:flex-col">
+                <div class="flex justify-between items-center md:flex-col md:gap-2">
                     <span class="text-slate-600 text-[10px] uppercase font-black md:hidden">Stock</span>
                     <div class="flex flex-col items-end md:items-center">
-                        <span class="bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded text-[10px] font-black tracking-widest">${res.ticker}</span>
-                        <span class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-widest">${res.stockName || 'Stock'}</span>
+                        <span class="bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded text-[10px] font-black tracking-widest leading-none">${res.ticker}</span>
+                        <span class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-widest leading-none">${res.stockName || 'Stock'}</span>
                     </div>
                 </div>
             </td>
@@ -125,7 +165,7 @@ function renderLeaderboard(results) {
             </td>
             <td class="px-8 py-3 md:py-5 block md:table-cell text-left md:text-right border-t border-slate-700/10 md:border-none">
                 <div class="flex justify-between items-start md:block">
-                    <span class="text-slate-600 text-[10px] uppercase font-black md:hidden pt-1">Value</span>
+                    <span class="text-slate-600 text-[10px] uppercase font-black md:hidden pt-1">Live Metrics</span>
                     <div class="text-right">
                         <p class="text-xs font-black text-white">$${res.marketValue.toLocaleString(undefined, CURRENCY_FORMAT)}</p>
                         <p class="text-[10px] text-slate-500 font-mono mt-0.5">PRICE: $${res.currentPrice.toFixed(2)}</p>
@@ -134,7 +174,7 @@ function renderLeaderboard(results) {
             </td>
             <td class="px-8 py-5 block md:table-cell text-left md:text-right bg-slate-700/10 md:bg-transparent">
                 <div class="flex justify-between items-center md:block">
-                    <span class="text-slate-600 text-[10px] uppercase font-black md:hidden">% Return</span>
+                    <span class="text-slate-600 text-[10px] uppercase font-black md:hidden">Total Return</span>
                     <p class="text-lg md:text-sm font-black ${res.gainPct >= 0 ? 'text-emerald-400' : 'text-red-400'}">
                         ${res.gainPct >= 0 ? '+' : ''}${res.gainPct.toFixed(2)}%
                     </p>
@@ -148,14 +188,29 @@ function updateStats(results) {
     const totalCap = results.reduce((s, r) => s + r.capital, 0); 
     const totalVal = results.reduce((s, r) => s + r.marketValue, 0);
     const totalPct = ((totalVal - totalCap) / totalCap) * 100;
+
     document.getElementById('stat-capital').innerText = `$${totalCap.toLocaleString(undefined, CURRENCY_FORMAT)}`;
     document.getElementById('stat-value').innerText = `$${totalVal.toLocaleString(undefined, CURRENCY_FORMAT)}`;
+    
     const gainEl = document.getElementById('stat-gain');
     gainEl.innerText = `${totalPct >= 0 ? '+' : ''}${totalPct.toFixed(2)}%`;
     gainEl.className = `text-4xl md:text-2xl font-black ${totalPct >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+    
     document.getElementById('stat-leader').innerText = results[0].name;
     const now = new Date();
     document.getElementById('last-updated').innerText = `SYNC: ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+}
+
+function updateMarketStatus() {
+    const now = new Date();
+    const nyTime = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hour12: false }).format(now);
+    const hour = parseInt(nyTime);
+    const day = now.getDay();
+    const isOpen = (day !== 0 && day !== 6) && hour >= 9 && hour < 16;
+    const dot = document.getElementById('status-dot');
+    const text = document.getElementById('status-text');
+    dot.className = `h-2 w-2 rounded-full ${isOpen ? 'bg-emerald-500 animate-ping' : (day === 0 || day === 6) ? 'bg-red-500' : 'bg-amber-500 animate-pulse'}`;
+    text.innerText = isOpen ? "Market Open" : (day === 0 || day === 6) ? "Market Closed (Weekend)" : "Market Closed (After Hours)";
 }
 
 function updateTopMover(results) {
@@ -165,13 +220,27 @@ function updateTopMover(results) {
 
 function getPrizeBadge(index, totalCount) {
     const rankKey = (index + 1).toString();
-    const prize = currentPrizes[rankKey] || (index === totalCount - 1 ? currentPrizes['last'] : null);
-    const style = PRIZE_STYLES[index] || (index === totalCount - 1 ? PRIZE_STYLES['last'] : null);
-    if (prize && style) {
-        return `<span class="mt-1.5 block w-fit px-2 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-tighter ${style}">
-                <span class="mr-1">${prize.emoji}</span>${prize.amount}</span>`;
+    
+    // 1. Try numeric rank (1, 2, 3)
+    let prize = currentPrizes[rankKey];
+    let style = PRIZE_STYLES[index];
+
+    // 2. Try the 'last' rank
+    // We check if the current index is the final one in the list
+    if (index === (totalCount - 1)) {
+        // If there isn't a specific prize for this rank (like 16th), 
+        // use the 'last' prize configuration.
+        if (!prize && currentPrizes['last']) {
+            prize = currentPrizes['last'];
+            style = PRIZE_STYLES['last'];
+        }
     }
-    return '';
+
+    return prize ? `
+        <span class="mt-1.5 block w-fit px-2 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-tighter ${style}">
+            <span class="mr-1">${prize.emoji}</span>${prize.amount}
+        </span>
+    ` : '';
 }
 
 function updateDynamicYear() {

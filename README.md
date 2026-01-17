@@ -6,102 +6,83 @@ A high-performance, mobile-responsive leaderboard for an annual stock-picking co
 
 ## 🚀 Features
 
+- **Dual-Source Data Engine:** Toggle between **Google Sheets** for live, no-code updates and **Local JSON** for versioned stability.
 - **Real-Time Leaderboard:** Dynamic calculation of gains, losses, and rankings.
-- **Human-Proof Data Management:** Prizes and participants are managed via simple JSON files—no coding required for updates.
 - **Integrated Prize Badges:** Winners (1st, 2nd, 3rd) and the "Last Place" consolation prize are highlighted directly on the leaderboard.
 - **Server-Side Caching:** Optimized to share a single API fetch across all family members every 5 minutes.
-- **Mobile-First Design:** Sleek Tailwind CSS interface that pivots from a desktop table to mobile data cards.
+- **Secure Configuration:** Sensitive data like Google Sheet IDs and API keys are stored in encrypted environment variables.
 
 ---
 
 ## 📂 Project Structure
 
-```text
 /
 ├── netlify/
 │   └── functions/
-│       └── get-prices.js    # Backend API proxy with 5m server-side caching
+│       └── get-prices.js    # Backend API proxy & secure ENV bridge
 ├── src/
 │   ├── data/
-│   │   ├── participants.json # The "Who": List of players and their picks
-│   │   └── prizes.json       # The "What": Payout amounts and emojis
-│   └── app.js                # Core Engine: Data fetching and UI rendering
+│   │   ├── participants.json # Local Fallback: List of players/picks
+│   │   └── prizes.json       # Local Fallback: Payouts & Benchmarks
+│   └── app.js                # Core Engine: Dual-adapter data fetching
 ├── index.html               # Semantic UI skeleton
-├── package.json             # Backend dependencies (Axios)
-└── netlify.toml             # Deployment configuration
-```
+├── netlify.toml             # Deployment configuration
+└── .env                     # Local secrets (SHEET_ID, FINNHUB_KEY)
 
 ---
 
-## 👥 Participant Management (participants.json)
-To update the players for a new season or fix an entry, edit src/data/participants.json.
+## 👥 Data Management Options
 
-Required Fields for Each Player:
-name: The participant's display name.
+The application supports two modes, controlled by the DATA_SOURCE constant in src/app.js.
 
-stockName: Full name of the company (e.g., "NVIDIA Corp").
+### Option A: Google Sheets (Recommended for Live Contest)
+Manage the entire contest without touching code. The app pulls from a Google Sheet acting as a live database.
 
-ticker: The stock symbol used for price lookups (e.g., "NVDA").
+1. Setup: Create a Google Sheet with three tabs: Participants, Prizes, and Benchmarks.
+2. Permissions: Set the sheet to "Anyone with the link can view." (Note: Do NOT use "Publish to Web").
+3. Connection: Add your SHEET_ID (the long string in the sheet's edit URL) to Netlify's environment variables.
+4. Logic: The app uses the Google Visualization API (/gviz/tq) to fetch and parse data into the UI.
 
-capital: The initial investment amount (e.g., 5000.00). Note: We use this explicit field to calculate the $80,000.00 baseline to avoid rounding errors.
+### Option B: Local JSON (Rollback/Archive Mode)
+If Google Sheets is unavailable or you wish to "lock" a season's results, set DATA_SOURCE = 'LOCAL' in app.js.
 
-cost: The purchase price per share at the start of the contest.
-
-shares: The number of shares owned (capital divided by cost).
+- Participants (src/data/participants.json): Define name, ticker, capital, cost, and shares.
+- Prizes (src/data/prizes.json): Define the emoji rewards and the startPrice for market benchmarks (SPY/QQQ).
 
 ---
 
-## 📊 Contest & Benchmark Management (prizes.json)
-This file controls the payouts and the indices shown in the header.
+## 📊 Prize & Benchmark Logic
 
-Prize Logic:
-Keys "1", "2", "3": Map to the Top 3 ranks.
+Whether using Sheets or JSON, the logic follows these rules:
 
-Key "last": Maps to the very bottom of the leaderboard.
-
-emoji: The icon displayed (e.g., 🥇, 💩).
-
-amount: The dollar value shown on the badge.
-
-Benchmark Configuration:
-The benchmarks compare the family's performance against the broader market.
-
-startPrice: Critical. Set this to the closing price of SPY and QQQ on the first day of the contest.
-
-Calculation: The app uses this to show the market's total return % since the contest began.
-
-```
-"benchmarks": {
-  "SPY": { "name": "S&P 500", "startPrice": 595.60 },
-  "QQQ": { "name": "Nasdaq", "startPrice": 510.40 }
-}
-```
+- Numeric Ranks ("1", "2", "3"): Automatically assigned to the top finishers based on total return %.
+- Consolation ("last"): A special key assigned to the person at the very bottom of the leaderboard.
+- Benchmarks: Compares family performance against market indices (SPY/QQQ).
+  - startPrice: Set this to the market price at the exact moment the contest starts to ensure accurate % gain tracking.
 
 ---
 
 ## 🛠️ Technical Architecture
-The app uses Promise.all() to fetch participants.json and prizes.json simultaneously. This prevents "loading waterfalls" and ensures the UI renders only when all configuration data is ready.
 
-Zero-Latency Benchmarking
-Benchmark tickers (SPY/QQQ) are appended to the participant ticker list and retrieved in a single batch request. This provides market context with zero additional API overhead.
+### The Secure Bridge
+Since browsers cannot access process.env, the Netlify Function acts as a secure bridge. It retrieves the SHEET_ID from the server environment and passes it to the frontend alongside the price data, keeping your spreadsheet ID out of the public GitHub repository.
 
-API Rate Limit Protection (Finnhub)
-To stay within the 60 calls per minute limit:
+[Image of a sequence diagram showing a browser requesting data from a serverless function, which retrieves an environment variable and returns it to the client]
 
-Server-Side Cache: The Netlify Function stores stock prices in global memory for 5 minutes.
+### Zero-Latency Batching
+Benchmark tickers (SPY/QQQ) are batched with participant tickers in a single request to the Finnhub API. This provides market context with zero additional API overhead or loading delay.
 
-Client Polling: app.js triggers an update every 5 minutes.
-
-Efficiency: This architecture allows an unlimited number of viewers while using only 192 API calls per hour (5.3% of the free allowance).
-
-Time-Zone Aware Logic
-The Market Status indicator converts the user's local time to America/New_York (EST) to ensure the "Market Open" status is accurate regardless of where the family member is located.
+### API Rate Limit Protection (Finnhub)
+- Server-Side Cache: Stock prices are stored in global memory for 5 minutes.
+- Client Polling: app.js refreshes every 5 minutes.
+- Efficiency: This architecture uses only ~5% of the monthly free-tier allowance, regardless of how many family members are viewing the site.
 
 ---
 
-## 🌍 Deployment
-1. API Key: Get a free key from Finnhub.io.
+## 🌍 Deployment & Local Dev
 
-2. Environment Variable: Add FINNHUB_KEY in Netlify under Site settings > Environment variables.
-
-3. Deploy: Any push to the main branch on GitHub will trigger an automatic production build.
+1. Environment Variables:
+   - FINNHUB_KEY: Your API key from Finnhub.io.
+   - SHEET_ID: The unique ID of your Google Sheet.
+2. Local Development: Run "netlify dev" to sync your local environment with your cloud variables and test the Google Sheet integration locally.
+3. Production: Any push to the main branch triggers an automatic build and deployment.
