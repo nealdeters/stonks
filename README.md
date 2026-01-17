@@ -16,6 +16,7 @@ A high-performance, mobile-responsive leaderboard for an annual stock-picking co
 
 ## 📂 Project Structure
 
+```text
 /
 ├── netlify/
 │   └── functions/
@@ -28,6 +29,7 @@ A high-performance, mobile-responsive leaderboard for an annual stock-picking co
 ├── index.html               # Semantic UI skeleton
 ├── netlify.toml             # Deployment configuration
 └── .env                     # Local secrets (SHEET_ID, FINNHUB_KEY)
+```
 
 ---
 
