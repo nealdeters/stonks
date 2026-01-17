@@ -1,14 +1,13 @@
 /**
- * STONKS - ENGINE
+ * STONKS - DYNAMIC CORE ENGINE
  */
 
 // --- GLOBAL CONFIG ---
-const DATA_SOURCE = 'SHEETS'; // Switch to 'LOCAL' for a quick rollback
+const DATA_SOURCE = 'SHEETS'; 
 const UPDATE_INTERVAL = 5 * 60 * 1000;
 const CURRENCY_FORMAT = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
 
 let currentPrizes = {};
-
 
 const PRIZE_STYLES = {
     0: "bg-amber-500/20 text-amber-500 border-amber-500/50",
@@ -26,10 +25,15 @@ async function getGoogleSheetsData(id) {
         const res = await fetch(url);
         const text = await res.text();
         const json = JSON.parse(text.substring(47).slice(0, -2));
+        
+        // Normalize headers to lowercase and remove spaces
         const headers = json.table.cols.map(col => col.label.toLowerCase().replace(/\s/g, ''));
+        
         return json.table.rows.map(row => {
             const item = {};
-            row.c.forEach((cell, i) => { if (headers[i]) item[headers[i]] = cell ? cell.v : null; });
+            row.c.forEach((cell, i) => { 
+                if (headers[i]) item[headers[i]] = cell ? cell.v : null; 
+            });
             return item;
         });
     };
@@ -42,16 +46,25 @@ async function getGoogleSheetsData(id) {
 
     const prizes = { benchmarks: {} };
 
+    // Map Prizes
     rawPrizes.forEach(p => {
-        // Only process if 'rank' has a value
         if (p.rank !== null && p.rank !== undefined) {
-            prizes[p.rank.toString()] = { 
-                emoji: p.emoji || '💰', // Fallback emoji
+            prizes[p.rank.toString().toLowerCase()] = { 
+                emoji: p.emoji || '💰', 
                 amount: p.amount || '$0.00' 
             };
         }
     });
-    rawBenchmarks.forEach(b => prizes.benchmarks[b.ticker] = { name: b.name, startPrice: b.startprice });
+
+    // Map Benchmarks: Uses 'startprice' from Sheet header normalization
+    rawBenchmarks.forEach(b => {
+        if (b.ticker) {
+            prizes.benchmarks[b.ticker.toUpperCase()] = { 
+                name: b.name || b.ticker, 
+                startPrice: b.startprice 
+            };
+        }
+    });
 
     return { participants, prizes };
 }
@@ -72,28 +85,30 @@ const initApp = async () => {
     updateMarketStatus();
 
     try {
-        // STEP 1: Securely get the ID from your "Bridge" (Netlify Function)
-        const configResponse = await fetch('/.netlify/functions/get-prices?tickers=SPY');
+        // STEP 1: Handshake for ID
+        const configResponse = await fetch('/.netlify/functions/get-prices'); 
         const { sheetId } = await configResponse.json();
 
-        if (!sheetId && DATA_SOURCE === 'SHEETS') {
-            throw new Error("SHEET_ID not found in Netlify Environment Variables.");
-        }
+        if (!sheetId && DATA_SOURCE === 'SHEETS') throw new Error("SHEET_ID not found.");
 
-        // STEP 2: Fetch Contest Data using the dynamic ID
+        // STEP 2: Fetch Contest Data
         const data = (DATA_SOURCE === 'SHEETS') 
             ? await getGoogleSheetsData(sheetId) 
             : await getLocalData();
 
         currentPrizes = data.prizes;
 
-        // STEP 3: Proceed with fetching all prices
-        const allTickers = [...data.participants.map(p => p.ticker), 'SPY', 'QQQ'].join(',');
+        // STEP 3: Dynamic Ticker Aggregation
+        const benchmarkTickers = Object.keys(currentPrizes.benchmarks || {});
+        const participantTickers = data.participants.map(p => p.ticker);
+        const allTickers = [...new Set([...participantTickers, ...benchmarkTickers])].join(',');
+
         const priceRes = await fetch(`/.netlify/functions/get-prices?tickers=${allTickers}`);
         const { prices: livePrices } = await priceRes.json();
 
-        // ... Logic & Rendering ...
+        // STEP 4: Render Components
         updateBenchmarks(livePrices);
+        
         const results = data.participants.map(p => {
             const live = livePrices.find(l => l.ticker === p.ticker);
             const currentPrice = live?.price || 0;
@@ -102,7 +117,7 @@ const initApp = async () => {
                 currentPrice,
                 marketValue: p.shares * currentPrice,
                 gainLoss: (p.shares * currentPrice) - p.capital,
-                gainPct: ((currentPrice - p.cost) / p.cost) * 100,
+                gainPct: p.cost > 0 ? ((currentPrice - p.cost) / p.cost) * 100 : 0,
                 dailyChange: live?.dp || 0
             };
         }).sort((a, b) => b.gainPct - a.gainPct);
@@ -118,18 +133,24 @@ const initApp = async () => {
 
 function updateBenchmarks(livePrices) {
     const config = currentPrizes.benchmarks;
-    if (!config) return;
-    ['SPY', 'QQQ'].forEach(ticker => {
+    const container = document.getElementById('benchmarks-container');
+    if (!config || !container) return;
+
+    container.innerHTML = Object.keys(config).map(ticker => {
         const live = livePrices.find(l => l.ticker === ticker);
         const start = config[ticker]?.startPrice;
         if (live && start) {
             const pct = ((live.price - start) / start) * 100;
-            const el = document.getElementById(`bench-${ticker.toLowerCase()}`);
             const color = pct >= 0 ? 'text-emerald-400' : 'text-red-400';
-            el.innerHTML = `<span class="${color} font-black">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</span>
-                            <span class="block text-[8px] text-slate-500 font-mono mt-1">$${live.price.toFixed(2)}</span>`;
+            return `
+                <div class="bg-slate-800/40 border border-slate-700/50 p-4 rounded-3xl flex-1 text-center min-w-[120px]">
+                    <p class="text-[9px] text-slate-500 uppercase font-black mb-1">${config[ticker].name}</p>
+                    <p class="text-sm font-bold ${color}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</p>
+                </div>
+            `;
         }
-    });
+        return '';
+    }).join('');
 }
 
 function renderLeaderboard(results) {
@@ -150,7 +171,7 @@ function renderLeaderboard(results) {
                     <span class="text-slate-600 text-[10px] uppercase font-black md:hidden">Stock</span>
                     <div class="flex flex-col items-end md:items-center">
                         <span class="bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded text-[10px] font-black tracking-widest leading-none">${res.ticker}</span>
-                        <span class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-widest leading-none">${res.stockName || 'Stock'}</span>
+                        <span class="text-[10px] text-slate-500 mt-2 font-bold uppercase tracking-widest leading-none">${res.stockname || 'STOCKS'}</span>
                     </div>
                 </div>
             </td>
@@ -165,7 +186,7 @@ function renderLeaderboard(results) {
             </td>
             <td class="px-8 py-3 md:py-5 block md:table-cell text-left md:text-right border-t border-slate-700/10 md:border-none">
                 <div class="flex justify-between items-start md:block">
-                    <span class="text-slate-600 text-[10px] uppercase font-black md:hidden pt-1">Live Metrics</span>
+                    <span class="text-slate-600 text-[10px] uppercase font-black md:hidden pt-1">Value</span>
                     <div class="text-right">
                         <p class="text-xs font-black text-white">$${res.marketValue.toLocaleString(undefined, CURRENCY_FORMAT)}</p>
                         <p class="text-[10px] text-slate-500 font-mono mt-0.5">PRICE: $${res.currentPrice.toFixed(2)}</p>
@@ -174,7 +195,7 @@ function renderLeaderboard(results) {
             </td>
             <td class="px-8 py-5 block md:table-cell text-left md:text-right bg-slate-700/10 md:bg-transparent">
                 <div class="flex justify-between items-center md:block">
-                    <span class="text-slate-600 text-[10px] uppercase font-black md:hidden">Total Return</span>
+                    <span class="text-slate-600 text-[10px] uppercase font-black md:hidden">% Return</span>
                     <p class="text-lg md:text-sm font-black ${res.gainPct >= 0 ? 'text-emerald-400' : 'text-red-400'}">
                         ${res.gainPct >= 0 ? '+' : ''}${res.gainPct.toFixed(2)}%
                     </p>
@@ -187,7 +208,7 @@ function renderLeaderboard(results) {
 function updateStats(results) {
     const totalCap = results.reduce((s, r) => s + r.capital, 0); 
     const totalVal = results.reduce((s, r) => s + r.marketValue, 0);
-    const totalPct = ((totalVal - totalCap) / totalCap) * 100;
+    const totalPct = totalCap > 0 ? ((totalVal - totalCap) / totalCap) * 100 : 0;
 
     document.getElementById('stat-capital').innerText = `$${totalCap.toLocaleString(undefined, CURRENCY_FORMAT)}`;
     document.getElementById('stat-value').innerText = `$${totalVal.toLocaleString(undefined, CURRENCY_FORMAT)}`;
@@ -196,7 +217,7 @@ function updateStats(results) {
     gainEl.innerText = `${totalPct >= 0 ? '+' : ''}${totalPct.toFixed(2)}%`;
     gainEl.className = `text-4xl md:text-2xl font-black ${totalPct >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
     
-    document.getElementById('stat-leader').innerText = results[0].name;
+    document.getElementById('stat-leader').innerText = results[0]?.name || '--';
     const now = new Date();
     document.getElementById('last-updated').innerText = `SYNC: ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
 }
@@ -215,32 +236,20 @@ function updateMarketStatus() {
 
 function updateTopMover(results) {
     const top = [...results].sort((a, b) => b.dailyChange - a.dailyChange)[0];
-    document.getElementById('top-mover-name').innerText = `${top.name} (+${top.dailyChange.toFixed(2)}%)`;
+    if (top) {
+        document.getElementById('top-mover-name').innerText = `${top.name} (+${top.dailyChange.toFixed(2)}%)`;
+    }
 }
 
 function getPrizeBadge(index, totalCount) {
     const rankKey = (index + 1).toString();
-    
-    // 1. Try numeric rank (1, 2, 3)
     let prize = currentPrizes[rankKey];
     let style = PRIZE_STYLES[index];
-
-    // 2. Try the 'last' rank
-    // We check if the current index is the final one in the list
-    if (index === (totalCount - 1)) {
-        // If there isn't a specific prize for this rank (like 16th), 
-        // use the 'last' prize configuration.
-        if (!prize && currentPrizes['last']) {
-            prize = currentPrizes['last'];
-            style = PRIZE_STYLES['last'];
-        }
+    if (index === (totalCount - 1) && !prize && currentPrizes['last']) {
+        prize = currentPrizes['last'];
+        style = PRIZE_STYLES['last'];
     }
-
-    return prize ? `
-        <span class="mt-1.5 block w-fit px-2 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-tighter ${style}">
-            <span class="mr-1">${prize.emoji}</span>${prize.amount}
-        </span>
-    ` : '';
+    return prize ? `<span class="mt-1.5 block w-fit px-2 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-tighter ${style}"><span class="mr-1">${prize.emoji}</span>${prize.amount}</span>` : '';
 }
 
 function updateDynamicYear() {

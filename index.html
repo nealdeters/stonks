@@ -25,24 +25,17 @@
         </header>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div class="bg-slate-800/40 border border-slate-700/50 p-4 rounded-3xl flex justify-around items-center">
-                <div class="text-center">
-                    <p class="text-[9px] text-slate-500 uppercase font-black mb-1">S&P 500 (SPY)</p>
-                    <p id="bench-spy" class="text-sm font-bold text-slate-300">--</p>
+            <div id="benchmarks-container" class="flex gap-3 overflow-x-auto pb-2 md:pb-0">
                 </div>
-                <div class="w-px h-8 bg-slate-700/50"></div>
-                <div class="text-center">
-                    <p class="text-[9px] text-slate-500 uppercase font-black mb-1">Nasdaq (QQQ)</p>
-                    <p id="bench-qqq" class="text-sm font-bold text-slate-300">--</p>
-                </div>
-            </div>
+
             <div class="bg-blue-500/5 border border-blue-500/20 p-4 rounded-3xl flex items-center gap-4">
                 <div class="bg-blue-500/20 p-2.5 rounded-xl text-xl">🚀</div>
-                <div>
+                <div class="overflow-hidden">
                     <p class="text-[9px] text-blue-400 uppercase font-black tracking-widest">Daily Top Mover</p>
-                    <p id="top-mover-name" class="text-sm font-bold text-white">Calculating...</p>
+                    <p id="top-mover-name" class="text-sm font-bold text-white truncate">Calculating...</p>
                 </div>
             </div>
+
             <div class="bg-emerald-500/5 border border-emerald-500/20 p-4 rounded-3xl flex items-center gap-4">
                 <div class="bg-emerald-500/20 p-2.5 rounded-xl text-xl">🏆</div>
                 <div>
@@ -82,11 +75,13 @@
                             <th class="px-8 py-5 text-right">% Return</th>
                         </tr>
                     </thead>
-                    <tbody id="leaderboard-body" class="block md:table-row-group divide-y divide-slate-700/50"></tbody>
+                    <tbody id="leaderboard-body" class="block md:table-row-group divide-y divide-slate-700/50">
+                        </tbody>
                 </table>
             </div>
         </div>
     </div>
+
     <script src="src/app.js"></script>
 </body>
 </html>
