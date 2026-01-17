@@ -1,6 +1,6 @@
-# 📈 Schultz Stock Contest 2026
+# 📈 Stonks
 
-A high-performance, mobile-responsive leaderboard for the annual Schultz family stock-picking contest. This application uses a serverless architecture to provide real-time performance tracking while remaining strictly within free-tier API limits.
+A high-performance, mobile-responsive leaderboard for an annual stock-picking contest. This application uses a serverless architecture to provide real-time performance tracking while remaining strictly within free-tier API limits.
 
 ---
 

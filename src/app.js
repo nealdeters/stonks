@@ -87,8 +87,7 @@ function updateBenchmarks(livePrices) {
             const pct = ((live.price - start) / start) * 100;
             const el = document.getElementById(`bench-${ticker.toLowerCase()}`);
             const color = pct >= 0 ? 'text-emerald-400' : 'text-red-400';
-            el.innerHTML = `<span class="${color} font-black">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</span>
-                            <span class="block text-[8px] text-slate-500 font-mono mt-1">$${live.price.toFixed(2)}</span>`;
+            el.innerHTML = `<span class="${color} font-black">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</span>`;
         }
     });
 }
@@ -126,7 +125,7 @@ function renderLeaderboard(results) {
             </td>
             <td class="px-8 py-3 md:py-5 block md:table-cell text-left md:text-right border-t border-slate-700/10 md:border-none">
                 <div class="flex justify-between items-start md:block">
-                    <span class="text-slate-600 text-[10px] uppercase font-black md:hidden pt-1">Live Metrics</span>
+                    <span class="text-slate-600 text-[10px] uppercase font-black md:hidden pt-1">Value</span>
                     <div class="text-right">
                         <p class="text-xs font-black text-white">$${res.marketValue.toLocaleString(undefined, CURRENCY_FORMAT)}</p>
                         <p class="text-[10px] text-slate-500 font-mono mt-0.5">PRICE: $${res.currentPrice.toFixed(2)}</p>
@@ -135,7 +134,7 @@ function renderLeaderboard(results) {
             </td>
             <td class="px-8 py-5 block md:table-cell text-left md:text-right bg-slate-700/10 md:bg-transparent">
                 <div class="flex justify-between items-center md:block">
-                    <span class="text-slate-600 text-[10px] uppercase font-black md:hidden">Total Return</span>
+                    <span class="text-slate-600 text-[10px] uppercase font-black md:hidden">% Return</span>
                     <p class="text-lg md:text-sm font-black ${res.gainPct >= 0 ? 'text-emerald-400' : 'text-red-400'}">
                         ${res.gainPct >= 0 ? '+' : ''}${res.gainPct.toFixed(2)}%
                     </p>
