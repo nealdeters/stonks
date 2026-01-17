@@ -25,7 +25,7 @@ exports.handler = async (event) => {
         );
         
         const responses = await Promise.all(requests);
-        const data = responses.map((r, i) => ({ ticker: tickers[i], price: r.data.c }));
+        const data = responses.map((r, i) => ({ ticker: tickers[i], price: r.data.c, dp: r.data.dp }));
 
         // 2. Update the Global Cache
         cachedData = data;

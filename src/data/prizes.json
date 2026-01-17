@@ -2,5 +2,9 @@
   "1": { "emoji": "🥇", "amount": "$100.00" },
   "2": { "emoji": "🥈", "amount": "$45.00" },
   "3": { "emoji": "🥉", "amount": "$10.00" },
-  "last": { "emoji": "💩", "amount": "$5.00" }
+  "last": { "emoji": "💩", "amount": "$5.00" },
+  "benchmarks": {
+    "SPY": { "name": "S&P 500", "startPrice": 595.60 },
+    "QQQ": { "name": "Nasdaq", "startPrice": 510.40 }
+  }
 }

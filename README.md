@@ -51,47 +51,57 @@ shares: The number of shares owned (capital divided by cost).
 
 ---
 
-## 💰 Prize Management (prizes.json)
-The contest payouts are entirely data-driven. To update the prize pool, edit src/data/prizes.json.
+## 📊 Contest & Benchmark Management (prizes.json)
+This file controls the payouts and the indices shown in the header.
 
-How it Works:
-Keys "1", "2", "3": Represent the top three ranks.
+Prize Logic:
+Keys "1", "2", "3": Map to the Top 3 ranks.
 
-Key "last": Represents the consolation prize for the bottom rank.
+Key "last": Maps to the very bottom of the leaderboard.
 
-emoji: The icon displayed (e.g., 🥇, 💩, 🚀).
+emoji: The icon displayed (e.g., 🥇, 💩).
 
 amount: The dollar value shown on the badge.
 
-Pro Tip: By separating the emoji from the amount, the app handles all the spacing and styling automatically.
+Benchmark Configuration:
+The benchmarks compare the family's performance against the broader market.
+
+startPrice: Critical. Set this to the closing price of SPY and QQQ on the first day of the contest.
+
+Calculation: The app uses this to show the market's total return % since the contest began.
+
+```
+"benchmarks": {
+  "SPY": { "name": "S&P 500", "startPrice": 595.60 },
+  "QQQ": { "name": "Nasdaq", "startPrice": 510.40 }
+}
+```
 
 ---
 
 ## 🛠️ Technical Architecture
-Parallel Data Orchestration
 The app uses Promise.all() to fetch participants.json and prizes.json simultaneously. This prevents "loading waterfalls" and ensures the UI renders only when all configuration data is ready.
 
+Zero-Latency Benchmarking
+Benchmark tickers (SPY/QQQ) are appended to the participant ticker list and retrieved in a single batch request. This provides market context with zero additional API overhead.
+
 API Rate Limit Protection (Finnhub)
-Finnhub's free tier allows 60 calls per minute. With 16 tickers, a single refresh uses 27% of that limit. We protect the API via two layers:
+To stay within the 60 calls per minute limit:
 
-Server-Side Cache: The Netlify Function (Node.js) stores stock prices in its global memory for 5 minutes.
+Server-Side Cache: The Netlify Function stores stock prices in global memory for 5 minutes.
 
-Client Polling: app.js triggers an update every 5 minutes using setInterval.
+Client Polling: app.js triggers an update every 5 minutes.
 
-Efficiency: This allows an unlimited number of family members to view the site simultaneously while only using 192 API calls per hour (5.3% of the total hourly allowance).
+Efficiency: This architecture allows an unlimited number of viewers while using only 192 API calls per hour (5.3% of the free allowance).
 
-Precision Finance Logic
-To prevent "penny drift" (where totals don't add up to $80,000.00 due to rounding), the app:
-
-Uses the capital field for the investment total.
-
-Enforces strict two-decimal formatting using the Intl.NumberFormat standard via a global CURRENCY_FORMAT constant.
+Time-Zone Aware Logic
+The Market Status indicator converts the user's local time to America/New_York (EST) to ensure the "Market Open" status is accurate regardless of where the family member is located.
 
 ---
 
 ## 🌍 Deployment
-API Key: Get a free key from Finnhub.io.
+1. API Key: Get a free key from Finnhub.io.
 
-Environment Variable: Add FINNHUB_KEY in the Netlify UI under Site settings > Environment variables.
+2. Environment Variable: Add FINNHUB_KEY in Netlify under Site settings > Environment variables.
 
-Deploy: Any push to the main branch on GitHub will automatically trigger a production build.
+3. Deploy: Any push to the main branch on GitHub will trigger an automatic production build.

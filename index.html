@@ -3,56 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Schultz Stock Game <span class="current-year"></span></title>
+    <title>Schultz Stonks <span class="current-year"></span></title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-white min-h-screen p-4 md:p-8">
+
     <div class="max-w-7xl mx-auto">
-        <header class="mb-8 flex justify-between items-end">
+        <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
             <div>
-                <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 uppercase">
-                    Schultz Stock Contest <span class="current-year"></span>
+                <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 uppercase leading-none">
+                    Schultz Stonks <span class="current-year"></span>
                 </h1>
-                <div class="flex items-center gap-2 mt-1">
-                    <span class="relative flex h-2 w-2">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </span>
-                    <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Market Live (5m Sync)</p>
+                <div class="flex items-center gap-3 mt-3">
+                    <div id="market-status" class="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 shadow-sm">
+                        <span id="status-dot" class="h-2 w-2 rounded-full bg-slate-500"></span>
+                        <span id="status-text" class="text-[10px] font-black uppercase tracking-widest text-slate-400">Syncing...</span>
+                    </div>
                 </div>
             </div>
-            <div id="last-updated" class="text-[10px] text-slate-600 hidden md:block uppercase tracking-widest"></div>
+            <div id="last-updated" class="text-[10px] text-slate-500 uppercase tracking-widest font-bold bg-slate-800/50 px-3 py-1 rounded-lg border border-slate-700/50"></div>
         </header>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-2xl">
-                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Total Capital</p>
-                <p id="stat-capital" class="text-xl font-bold">$0</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="bg-slate-800/40 border border-slate-700/50 p-4 rounded-3xl flex justify-around items-center">
+                <div class="text-center">
+                    <p class="text-[9px] text-slate-500 uppercase font-black mb-1">S&P 500 (SPY)</p>
+                    <p id="bench-spy" class="text-sm font-bold text-slate-300">--</p>
+                </div>
+                <div class="w-px h-8 bg-slate-700/50"></div>
+                <div class="text-center">
+                    <p class="text-[9px] text-slate-500 uppercase font-black mb-1">Nasdaq (QQQ)</p>
+                    <p id="bench-qqq" class="text-sm font-bold text-slate-300">--</p>
+                </div>
             </div>
-            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-2xl">
-                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Market Value</p>
-                <p id="stat-value" class="text-xl font-bold">$0</p>
+            <div class="bg-blue-500/5 border border-blue-500/20 p-4 rounded-3xl flex items-center gap-4">
+                <div class="bg-blue-500/20 p-2.5 rounded-xl text-xl">🚀</div>
+                <div>
+                    <p class="text-[9px] text-blue-400 uppercase font-black tracking-widest">Daily Top Mover</p>
+                    <p id="top-mover-name" class="text-sm font-bold text-white">Calculating...</p>
+                </div>
             </div>
-            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-2xl text-center">
-                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Overall Gain</p>
-                <p id="stat-gain" class="text-xl font-bold">0.00%</p>
-            </div>
-            <div class="bg-slate-800/50 border border-slate-700 p-4 rounded-2xl text-right">
-                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Leader</p>
-                <p id="stat-leader" class="text-xl font-bold text-emerald-400">---</p>
+            <div class="bg-emerald-500/5 border border-emerald-500/20 p-4 rounded-3xl flex items-center gap-4">
+                <div class="bg-emerald-500/20 p-2.5 rounded-xl text-xl">🏆</div>
+                <div>
+                    <p class="text-[9px] text-emerald-400 uppercase font-black tracking-widest">Current Leader</p>
+                    <p id="stat-leader" class="text-sm font-bold text-white">--</p>
+                </div>
             </div>
         </div>
 
-        <div class="bg-slate-800 rounded-3xl border border-slate-700 shadow-2xl overflow-hidden">
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+            <div class="bg-slate-800/80 border border-slate-700 p-5 rounded-3xl shadow-xl">
+                <p class="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Investment</p>
+                <p id="stat-capital" class="text-xl md:text-2xl font-black">$0.00</p>
+            </div>
+            <div class="bg-slate-800/80 border border-slate-700 p-5 rounded-3xl shadow-xl">
+                <p class="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Live Metrics</p>
+                <p id="stat-value" class="text-xl md:text-2xl font-black">$0.00</p>
+            </div>
+            <div class="col-span-2 md:col-span-1 bg-slate-800 border border-slate-700 p-5 rounded-3xl shadow-xl flex flex-col justify-center items-center md:items-start relative overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-50"></div>
+                <div class="relative z-10 text-center md:text-left">
+                    <p class="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Total Return</p>
+                    <p id="stat-gain" class="text-4xl md:text-2xl font-black">0.00%</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-slate-800 rounded-[2.5rem] border border-slate-700 shadow-2xl overflow-hidden mb-12">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse block md:table">
-                    <thead class="bg-slate-900/50 text-slate-400 text-[10px] uppercase font-bold tracking-wider hidden md:table-header-group">
+                    <thead class="bg-slate-900/50 text-slate-500 text-[10px] uppercase font-black tracking-[0.15em] hidden md:table-header-group">
                         <tr>
-                            <th class="px-6 py-4">Participant</th>
-                            <th class="px-6 py-4 text-center">Stock</th>
-                            <th class="px-6 py-4 text-right">Investment</th>
-                            <th class="px-6 py-4 text-right">Market</th>
-                            <th class="px-6 py-4 text-right">Return</th>
+                            <th class="px-8 py-5">Participant</th>
+                            <th class="px-8 py-5 text-center">Stock</th>
+                            <th class="px-8 py-5 text-right">Investment</th>
+                            <th class="px-8 py-5 text-right">Live Metrics</th>
+                            <th class="px-8 py-5 text-right">Total Return</th>
                         </tr>
                     </thead>
                     <tbody id="leaderboard-body" class="block md:table-row-group divide-y divide-slate-700/50"></tbody>
