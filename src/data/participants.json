@@ -1,5 +1,18 @@
 [
-  { "name": "Kyle Hendrix", "ticker": "AMD", "shares": 45.512, "cost": 109.86 },
-  { "name": "Keagan Boll", "ticker": "BABA", "shares": 51.680, "cost": 96.75 },
-  { "name": "Neal Deters", "ticker": "FOUR", "shares": 41.322, "cost": 121.00 }
+  { "name": "Kyle Hendrix", "stockName": "Advanced Micro Devices", "ticker": "AMD", "capital": 5000.00, "cost": 109.8600, "shares": 45.512 },
+  { "name": "Keagan Boll", "stockName": "Alibaba Group Holding Ltd - ADR", "ticker": "BABA", "capital": 5000.00, "cost": 96.7500, "shares": 51.680 },
+  { "name": "Laura Schmidt", "stockName": "Nvidia", "ticker": "NVDA", "capital": 5000.00, "cost": 121.2400, "shares": 41.241 },
+  { "name": "Christo Schultz", "stockName": "Vertiv Holding Co", "ticker": "VRTR", "capital": 5000.00, "cost": 107.7800, "shares": 46.391 },
+  { "name": "Kelly Schultz", "stockName": "Intel Corp", "ticker": "INTC", "capital": 5000.00, "cost": 23.5600, "shares": 212.224 },
+  { "name": "Bill Herman", "stockName": "Rush Street Interactive Inc.", "ticker": "RSI", "capital": 5000.00, "cost": 14.2500, "shares": 350.877 },
+  { "name": "Emmie Schultz", "stockName": "Exelixis Inc", "ticker": "EXEL", "capital": 5000.00, "cost": 34.9400, "shares": 143.102 },
+  { "name": "Ann Deters", "stockName": "3M Co", "ticker": "MMM", "capital": 5000.00, "cost": 149.3800, "shares": 33.472 },
+  { "name": "Jack Schultz", "stockName": "PDD Holdings Inc.", "ticker": "PDD", "capital": 5000.00, "cost": 111.4500, "shares": 44.863 },
+  { "name": "Elizabeth Lacksen", "stockName": "Spotify", "ticker": "SPOT", "capital": 5000.00, "cost": 619.0000, "shares": 8.078 },
+  { "name": "Audra Schultz", "stockName": "Grayscale Bitcoin Mini Trust ETF", "ticker": "BTC", "capital": 5000.00, "cost": 44.8600, "shares": 111.458 },
+  { "name": "Jeff Deters", "stockName": "Tempus AI", "ticker": "TEM", "capital": 5000.00, "cost": 83.9000, "shares": 59.595 },
+  { "name": "Neal Deters", "stockName": "Shift4Payments", "ticker": "FOUR", "capital": 5000.00, "cost": 121.0000, "shares": 41.322 },
+  { "name": "Kayla Deters", "stockName": "Duolingo", "ticker": "DUOL", "capital": 5000.00, "cost": 388.3400, "shares": 12.875 },
+  { "name": "Laura Schultz", "stockName": "International Battery Metals Ltd", "ticker": "IBATF", "capital": 5000.00, "cost": 0.4000, "shares": 12500.000 },
+  { "name": "Jim Schultz", "stockName": "New Fortress Energy", "ticker": "NFE", "capital": 5000.00, "cost": 10.1900, "shares": 490.677 }
 ]
