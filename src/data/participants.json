@@ -1,4 +1,5 @@
 [
   { "name": "Kyle Hendrix", "ticker": "AMD", "shares": 45.512, "cost": 109.86 },
-  { "name": "Keagan Boll", "ticker": "BABA", "shares": 51.680, "cost": 96.75 }
+  { "name": "Keagan Boll", "ticker": "BABA", "shares": 51.680, "cost": 96.75 },
+  { "name": "Neal Deters", "ticker": "FOUR", "shares": 41.322, "cost": 121.00 }
 ]

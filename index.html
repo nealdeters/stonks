@@ -1,11 +1,49 @@
-<!-- /
-├── netlify/
-│   └── functions/
-│       └── get-prices.js    <-- Serverless proxy to hide API keys
-├── src/
-│   ├── data/
-│   │   └── participants.json <-- Your "Database" (Easy to edit!)
-│   ├── app.js               <-- Core logic (fetching & rendering)
-│   └── style.css            <-- Modern, responsive UI
-├── index.html               <-- The skeleton
-└── netlify.toml             <-- Netlify configuration -->
+<script>
+    async function initApp() {
+        try {
+            // 1. Fetch the "Source of Truth" from your JSON file
+            const response = await fetch('./src/data/participants.json');
+            if (!response.ok) throw new Error("Could not load participant data");
+            const participants = await response.json();
+
+            // 2. Fetch live prices (Simulated for now, or use your Netlify Function)
+            const livePrices = await fetchPrices(participants);
+
+            // 3. Process and Render
+            const results = participants.map(p => {
+                const live = livePrices.find(l => l.ticker === p.ticker);
+                const marketValue = p.shares * live.price;
+                const gainPct = ((live.price - p.cost) / p.cost) * 100;
+                return { ...p, currentPrice: live.price, marketValue, gainPct };
+            }).sort((a, b) => b.gainPct - a.gainPct);
+
+            renderLeaderboard(results);
+        } catch (err) {
+            console.error("App Initialization Failed:", err);
+        }
+    }
+
+    // Helper to simulate prices until you connect your API key
+    async function fetchPrices(participants) {
+        return participants.map(p => ({
+            ticker: p.ticker,
+            price: p.cost * (1 + (Math.random() * 0.2)) 
+        }));
+    }
+
+    function renderLeaderboard(results) {
+        const leaderboard = document.getElementById('leaderboard-body');
+        leaderboard.innerHTML = results.map((res, index) => `
+            <tr class="hover:bg-slate-700/30 transition-colors">
+                <td class="px-6 py-4 font-mono text-slate-500">#${index + 1}</td>
+                <td class="px-6 py-4 font-semibold text-white">${res.name}</td>
+                <td class="px-6 py-4"><span class="bg-blue-900/40 text-blue-300 px-2 py-1 rounded text-xs font-bold">${res.ticker}</span></td>
+                <td class="px-6 py-4 text-right font-bold ${res.gainPct >= 0 ? 'text-emerald-400' : 'text-red-400'}">
+                    ${res.gainPct.toFixed(2)}%
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    initApp();
+</script>

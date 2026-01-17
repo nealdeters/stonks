@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 exports.handler = async (event) => {
-  const API_KEY = process.env.FINNHUB_KEY; // Hidden in Netlify settings
+  const API_KEY = process.env.FINNHUB_KEY;
   const tickers = event.queryStringParameters.tickers.split(',');
 
   try {
