@@ -1,0 +1,56 @@
+/* src/style.css */
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #0f172a; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+html, body {
+    scroll-behavior: smooth;
+    /* Essential: sticky fails if any parent has overflow: hidden */
+    overflow-x: visible; 
+}
+
+/* PRIMARY STICKY: Logo and Market Status */
+.main-sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background-color: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+    width: 100%;
+}
+
+/* SECONDARY STICKY: Table Headers */
+@media (min-width: 768px) {
+    #leaderboard-table thead th {
+        position: sticky;
+        top: 112px; /* Adjusted to match main-sticky-header height */
+        z-index: 40;
+        background-color: #1e293b; /* Slate-800: Matches the leaderboard card color */
+        padding-top: 1.5rem;
+        padding-bottom: 1.5rem;
+        /* Bottom border via shadow to maintain precision */
+        box-shadow: inset 0 -1px 0 rgba(51, 65, 85, 0.5); 
+    }
+
+    /* Round the top-left corner of the first header cell */
+    #leaderboard-table thead th:first-child {
+        border-top-left-radius: 2.5rem;
+    }
+
+    /* Round the top-right corner of the last header cell */
+    #leaderboard-table thead th:last-child {
+        border-top-right-radius: 2.5rem;
+    }
+}
+
+/* Mobile-specific blocks */
+@media (max-width: 767px) {
+    .mobile-block-row {
+        display: block;
+        width: 100%;
+    }
+}

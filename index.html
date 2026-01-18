@@ -10,13 +10,14 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="src/style.css">
 </head>
-<body class="bg-slate-900 text-white min-h-screen p-4 md:p-8">
+<body class="bg-slate-900 text-white min-h-screen">
 
-    <div class="max-w-7xl mx-auto">
-        <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+    <header class="main-sticky-header">
+        <div class="max-w-7xl mx-auto px-4 md:px-8 py-4 md:py-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
             <div>
-                <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 uppercase leading-none">
+                <h1 class="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 uppercase leading-none">
                     Stonks <span class="current-year"></span>
                 </h1>
                 <div class="flex items-center gap-3 mt-3">
@@ -27,11 +28,12 @@
                 </div>
             </div>
             <div id="last-updated" class="text-[10px] text-slate-500 uppercase tracking-widest font-bold bg-slate-800/50 px-3 py-1 rounded-lg border border-slate-700/50"></div>
-        </header>
+        </div>
+    </header>
 
+    <main class="max-w-7xl mx-auto px-4 md:px-8 pt-8">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div id="benchmarks-container" class="flex gap-3 overflow-x-auto pb-2 md:pb-0">
-                </div>
+            <div id="benchmarks-container" class="flex gap-3 overflow-x-auto pb-2 md:pb-0"></div>
 
             <div class="bg-blue-500/5 border border-blue-500/20 p-4 rounded-3xl flex items-center gap-4">
                 <div class="bg-blue-500/20 p-2.5 rounded-xl text-xl">🚀</div>
@@ -68,16 +70,16 @@
             </div>
         </div>
 
-        <div class="bg-slate-800 rounded-[2.5rem] border border-slate-700 shadow-2xl overflow-hidden mb-12">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse block md:table">
-                    <thead class="bg-slate-900/50 text-slate-500 text-[10px] uppercase font-black tracking-[0.15em] hidden md:table-header-group">
+        <div class="bg-slate-800 rounded-[2.5rem] border border-slate-700 shadow-2xl mb-12">
+            <div class="w-full">
+                <table id="leaderboard-table" class="w-full text-left border-separate border-spacing-0 block md:table">
+                    <thead class="text-slate-500 text-[10px] uppercase font-black tracking-[0.15em] hidden md:table-header-group">
                         <tr>
-                            <th class="px-8 py-5">Participant</th>
-                            <th class="px-8 py-5 text-center">Stock</th>
-                            <th class="px-8 py-5 text-right">Investment</th>
-                            <th class="px-8 py-5 text-right">Value</th>
-                            <th class="px-8 py-5 text-right">% Return</th>
+                            <th class="px-8">Participant</th>
+                            <th class="px-8 text-center">Stock</th>
+                            <th class="px-8 text-right">Investment</th>
+                            <th class="px-8 text-right">Value</th>
+                            <th class="px-8 text-right">% Return</th>
                         </tr>
                     </thead>
                     <tbody id="leaderboard-body" class="block md:table-row-group divide-y divide-slate-700/50">
@@ -85,13 +87,8 @@
                 </table>
             </div>
         </div>
-    </div>
+    </main>
 
     <script src="src/app.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js');
-        }
-    </script>
 </body>
 </html>
