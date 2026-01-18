@@ -26,7 +26,12 @@ A high-performance, mobile-responsive leaderboard for an annual stock-picking co
 │   │   ├── participants.json # Local Fallback: List of players/picks
 │   │   └── prizes.json       # Local Fallback: Payouts & Benchmarks
 │   └── app.js                # Core Engine: Dual-adapter data fetching
+├── tests/
+│   ├── backend.test.js       # Unit tests for Netlify functions
+│   └── ui.test.js            # End-to-end UI tests with Puppeteer
 ├── index.html               # Semantic UI skeleton
+├── style.css                # Custom styling
+├── manifest.json            # PWA configuration
 ├── netlify.toml             # Deployment configuration
 └── .env                     # Local secrets (SHEET_ID, FINNHUB_KEY)
 ```

@@ -1,39 +1,83 @@
 /* src/style.css */
 
-/* Custom scrollbar */
+/* Custom scrollbar - Midnight Aurora Style */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: #020617; }
 ::-webkit-scrollbar-thumb { background: #1e1b4b; border-radius: 10px; }
 
 html, body {
     scroll-behavior: smooth;
+    /* Essential: sticky fails if any parent has overflow: hidden or auto */
     overflow-x: visible; 
-    background-color: #020617; /* Midnight Navy */
+    background-color: #020617; 
 }
 
-/* STICKY BRANDING */
+/* PRIMARY STICKY: Logo and Market Status */
 .main-sticky-header {
     position: sticky;
     top: 0;
-    z-index: 50;
-    background-color: rgba(2, 6, 23, 0.9);
+    z-index: 100;
+    background-color: #020617; 
     backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(99, 102, 241, 0.2); /* Subtle Indigo Glow */
+    border-bottom: 1px solid rgba(99, 102, 241, 0.1); 
     width: 100%;
+    /* Ensure height is determined by content to prevent overlap */
+    height: auto;
+    min-height: 112px;
+    display: flex;
+    align-items: center;
 }
 
-/* STICKY TABLE HEADERS */
+/* SECONDARY STICKY: Table Headers */
 @media (min-width: 768px) {
     #leaderboard-table thead th {
         position: sticky;
-        top: 112px; 
-        z-index: 40;
-        background-color: #0f172a; 
+        top: 111px; /* 1px overlap to prevent rendering slivers */
+        z-index: 50;
+        background-color: #020617; 
         padding-top: 1.5rem;
         padding-bottom: 1.5rem;
-        box-shadow: inset 0 -1px 0 rgba(99, 102, 241, 0.3); 
+        box-shadow: 0 1px 0 rgba(99, 102, 241, 0.2);
     }
 
+    /* Rounding for the leaderboard card */
     #leaderboard-table thead th:first-child { border-top-left-radius: 2.5rem; }
     #leaderboard-table thead th:last-child { border-top-right-radius: 2.5rem; }
+}
+
+/* THE CONTAINER: Fixed rounding-to-square transition */
+.leaderboard-card-container {
+    overflow: clip; 
+    border-radius: 2.5rem;
+}
+
+/* MOBILE CENTERED HEADER */
+@media (max-width: 767px) {
+    .main-sticky-header > div {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 1.5rem 0;
+        gap: 1.25rem;
+    }
+    .header-branding {
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+    #market-status { margin: 0 auto; }
+}
+
+/* Secondary Button Style */
+.btn-secondary {
+    background-color: rgba(99, 102, 241, 0.05);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    color: rgba(165, 180, 252, 0.7);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-secondary:hover {
+    background-color: rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.4);
+    color: #fff;
 }
