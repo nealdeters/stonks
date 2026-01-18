@@ -10,7 +10,9 @@ const path = require('path');
     }
 
     // 2. Launch Browser
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
     const page = await browser.newPage();
     
     // Set a nice desktop viewport
@@ -18,6 +20,10 @@ const path = require('path');
 
     // 3. Navigate to your site (Replace with your actual Netlify URL)
     const url = process.env.SITE_URL;
+    if (!url) {
+        console.error('Error: SITE_URL environment variable is not set. Please add it to GitHub Secrets.');
+        process.exit(1);
+    }
     await page.goto(url, { waitUntil: 'networkidle0' });
 
     // 4. Wait for animations/data (Stonks app takes a moment to fetch prices)
