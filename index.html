@@ -40,50 +40,42 @@
     </header>
 
     <main class="max-w-7xl mx-auto px-4 md:px-8 pt-8">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div id="benchmarks-container" class="flex gap-3 overflow-x-auto pb-2 md:pb-0"></div>
+        <div class="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4 mb-8">
+            <div id="benchmarks-container" class="flex flex-wrap gap-3"></div>
 
-            <div class="bg-violet-500/5 border border-violet-500/20 p-4 rounded-3xl flex items-center gap-4">
+            <div class="bg-violet-500/5 border border-violet-500/20 p-4 rounded-3xl flex items-center gap-4 h-full">
                 <div class="bg-violet-500/20 p-2.5 rounded-xl text-xl">🚀</div>
                 <div>
                     <p class="text-[9px] text-violet-400 uppercase font-black tracking-widest">Daily Top Mover</p>
                     <p id="top-mover-name" class="text-sm font-bold text-white">Calculating...</p>
                 </div>
             </div>
-
-            <div class="bg-cyan-500/5 border border-cyan-500/20 p-4 rounded-3xl flex items-center gap-4">
-                <div class="bg-cyan-500/20 p-2.5 rounded-xl text-xl">🏆</div>
-                <div>
-                    <p class="text-[9px] text-cyan-400 uppercase font-black tracking-widest">Current Leader</p>
-                    <p id="stat-leader" class="text-sm font-bold text-white">--</p>
-                </div>
-            </div>
         </div>
 
         <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
             <div class="bg-indigo-950/40 border border-indigo-500/20 p-5 rounded-3xl shadow-xl">
-                <p class="text-[10px] text-indigo-300/50 uppercase font-black tracking-widest mb-1">Total Investment</p>
+                <p class="text-[10px] text-indigo-300/70 uppercase font-black tracking-widest mb-1">Total Investment</p>
                 <p id="stat-capital" class="text-xl md:text-2xl font-black">$0.00</p>
             </div>
             <div class="bg-indigo-950/40 border border-indigo-500/20 p-5 rounded-3xl shadow-xl">
-                <p class="text-[10px] text-indigo-300/50 uppercase font-black tracking-widest mb-1">Total Value</p>
+                <p class="text-[10px] text-indigo-300/70 uppercase font-black tracking-widest mb-1">Total Value</p>
                 <p id="stat-value" class="text-xl md:text-2xl font-black">$0.00</p>
             </div>
             <div class="col-span-2 md:col-span-1 bg-indigo-900/20 border border-indigo-500/30 p-5 rounded-3xl shadow-xl relative overflow-hidden">
-                <p class="text-[10px] text-indigo-300/50 uppercase font-black tracking-widest mb-1">Total % Return</p>
+                <p class="text-[10px] text-indigo-300/70 uppercase font-black tracking-widest mb-1">Total % Return</p>
                 <p id="stat-gain" class="text-4xl md:text-2xl font-black">0.00%</p>
             </div>
         </div>
 
         <div class="leaderboard-card-container bg-indigo-950/10 border border-indigo-500/10 shadow-2xl mb-12">
             <table id="leaderboard-table" class="w-full text-left border-separate border-spacing-0 block md:table">
-                <thead class="text-indigo-300/40 text-[10px] uppercase font-black tracking-widest hidden md:table-header-group">
+                <thead class="text-indigo-300/90 text-[10px] uppercase font-black tracking-widest hidden md:table-header-group">
                     <tr>
                         <th class="px-8">Participant</th>
                         <th class="px-8 text-center">Stock</th>
-                        <th class="px-8 text-right">Investment</th>
-                        <th class="px-8 text-right">Value</th>
-                        <th class="px-8 text-right">% Return</th>
+                        <th class="px-8 text-center">Investment</th>
+                        <th class="px-8 text-center">Value</th>
+                        <th class="px-8 text-center">% Return</th>
                     </tr>
                 </thead>
                 <tbody id="leaderboard-body" class="block md:table-row-group divide-y divide-indigo-500/10"></tbody>

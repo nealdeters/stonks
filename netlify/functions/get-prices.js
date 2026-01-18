@@ -52,11 +52,15 @@ exports.handler = async (event) => {
         }
     }
 
+   // Check if the user specifically requested to bypass the cache
+    const forceRefresh = event.queryStringParameters?.refresh === 'true';
+
     // --- LIVE PRICE MODE ---
     const cacheKey = [...tickers].sort().join(',');
     const now = Date.now();
 
-    if (globalCache[cacheKey] && (now - globalCache[cacheKey].time < CACHE_DURATION)) {
+    // Modified condition: only return cache if NOT forcing a refresh
+    if (!forceRefresh && globalCache[cacheKey] && (now - globalCache[cacheKey].time < CACHE_DURATION)) {
         return { 
             statusCode: 200, 
             headers: HEADERS,
@@ -65,19 +69,31 @@ exports.handler = async (event) => {
     }
 
     try {
-        const requests = tickers.map(symbol => 
+        const priceRequests = tickers.map(symbol => 
             axios.get(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${API_KEY}`)
         );
-        const results = await Promise.allSettled(requests);
-        const data = results.map((result, i) => {
-            if (result.status === 'fulfilled') {
-                return {
-                    ticker: tickers[i],
-                    price: result.value.data?.c || 0,
-                    dp: result.value.data?.dp || 0
-                };
-            }
-            return { ticker: tickers[i], price: 0, dp: 0 };
+        
+        const symbolListRequest = axios.get(`https://finnhub.io/api/v1/stock/symbol?exchange=US&token=${API_KEY}`);
+
+        const [symbolListResult, ...priceResults] = await Promise.all([
+            symbolListRequest,
+            ...priceRequests
+        ]);
+
+        const symbolMap = new Map(
+            symbolListResult.data.map(item => [item.symbol, item.description])
+        );
+
+        const data = tickers.map((symbol, i) => {
+            const quoteResult = priceResults[i];
+            const priceData = quoteResult.status === 200 ? quoteResult.data : {};
+
+            return {
+                ticker: symbol,
+                name: symbolMap.get(symbol) || symbol, 
+                price: priceData.c || 0,
+                dp: priceData.dp || 0
+            };
         });
 
         globalCache[cacheKey] = { data: data, time: now };
