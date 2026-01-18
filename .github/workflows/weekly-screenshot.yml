@@ -1,0 +1,38 @@
+name: Weekly Screenshot
+
+on:
+  schedule:
+    # Runs at 20:00 UTC every Friday (approx 4pm ET)
+    - cron: '0 20 * * 5'
+  workflow_dispatch: # Allows you to click "Run Now" manually in GitHub
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to commit the image back to the repo
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Puppeteer
+        run: npm install puppeteer
+
+      - name: Take Screenshot
+        run: node src/capture.js
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+
+      - name: Save Image to Repo
+        run: |
+          git config --global user.name 'Stonks Bot'
+          git config --global user.email 'bot@stonks.local'
+          git add screenshots/*.png
+          git commit -m "📸 Weekly Leaderboard: $(date +'%Y-%m-%d')" || exit 0
+          git push
