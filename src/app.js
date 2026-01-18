@@ -21,7 +21,7 @@ const PRIZE_STYLES = {
  */
 async function getGoogleSheetsData(id) {
     const fetchTab = async (tab) => {
-        const url = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=${tab}&t=${Date.now()}`;
+        const url = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=${tab}`;
         const res = await fetch(url);
         const text = await res.text();
         const json = JSON.parse(text.substring(47).slice(0, -2));
