@@ -1,0 +1,16 @@
+name: Weekly Report
+on:
+  schedule:
+    - cron: '0 21 * * 5' # Every Friday at 5:00 PM ET (21:00 UTC)
+  workflow_dispatch: 
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm install axios resend
+      - run: node scripts/send-report.js
+        env:
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
