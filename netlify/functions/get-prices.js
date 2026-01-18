@@ -20,7 +20,6 @@ exports.handler = async (event) => {
         .filter(t => t.length > 0);
 
     // --- HANDSHAKE MODE ---
-    // If no tickers are requested, fetch the Payment config and return it
     if (tickers.length === 0) {
         try {
             const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Payment`;
@@ -28,7 +27,6 @@ exports.handler = async (event) => {
             const text = res.data;
             const json = JSON.parse(text.substring(47).slice(0, -2));
             
-            // Map the first row of the Payment tab to a config object
             const row = json.table.rows[0].c;
             const config = {
                 entryFee: row[0]?.v || 0,
@@ -40,26 +38,22 @@ exports.handler = async (event) => {
             return {
                 statusCode: 200,
                 headers: HEADERS,
-                body: JSON.stringify({ sheetId: SHEET_ID, config, prices: [] })
+                body: JSON.stringify({ sheetId: SHEET_ID, config, prices: [], cached: false })
             };
         } catch (err) {
-            console.error("Payment Config Fetch Error:", err);
+            console.error("Payment Config Fetch Error:", err.message);
             return {
                 statusCode: 200,
                 headers: HEADERS,
-                body: JSON.stringify({ sheetId: SHEET_ID, prices: [] })
+                body: JSON.stringify({ sheetId: SHEET_ID, prices: [], cached: false })
             };
         }
     }
 
-   // Check if the user specifically requested to bypass the cache
     const forceRefresh = event.queryStringParameters?.refresh === 'true';
-
-    // --- LIVE PRICE MODE ---
     const cacheKey = [...tickers].sort().join(',');
     const now = Date.now();
 
-    // Modified condition: only return cache if NOT forcing a refresh
     if (!forceRefresh && globalCache[cacheKey] && (now - globalCache[cacheKey].time < CACHE_DURATION)) {
         return { 
             statusCode: 200, 
@@ -69,24 +63,26 @@ exports.handler = async (event) => {
     }
 
     try {
+        // Fetch Symbol List separately to keep price indexing clean
+        let symbolMap = new Map();
+        try {
+            const symbolListResult = await axios.get(`https://finnhub.io/api/v1/stock/symbol?exchange=US&token=${API_KEY}`);
+            if (Array.isArray(symbolListResult.data)) {
+                symbolListResult.data.forEach(item => symbolMap.set(item.symbol, item.description));
+            }
+        } catch (e) {
+            console.error("Symbol List Fetch Failed");
+        }
+
         const priceRequests = tickers.map(symbol => 
             axios.get(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${API_KEY}`)
         );
         
-        const symbolListRequest = axios.get(`https://finnhub.io/api/v1/stock/symbol?exchange=US&token=${API_KEY}`);
-
-        const [symbolListResult, ...priceResults] = await Promise.all([
-            symbolListRequest,
-            ...priceRequests
-        ]);
-
-        const symbolMap = new Map(
-            symbolListResult.data.map(item => [item.symbol, item.description])
-        );
+        const priceResults = await Promise.allSettled(priceRequests);
 
         const data = tickers.map((symbol, i) => {
-            const quoteResult = priceResults[i];
-            const priceData = quoteResult.status === 200 ? quoteResult.data : {};
+            const result = priceResults[i];
+            const priceData = result.status === 'fulfilled' ? result.value.data : {};
 
             return {
                 ticker: symbol,
@@ -106,6 +102,7 @@ exports.handler = async (event) => {
     } catch (error) {
         return { 
             statusCode: 500, 
+            headers: HEADERS,
             body: JSON.stringify({ error: "Internal Server Error", sheetId: SHEET_ID }) 
         };
     }
