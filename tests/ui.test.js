@@ -1,9 +1,9 @@
 const { test, describe, before, after } = require('node:test');
 const assert = require('node:assert');
-const puppeteer = require('puppeteer');
 const path = require('path');
 const http = require('node:http');
 const fs = require('node:fs');
+const { launchBrowser } = require('./helpers/browser');
 
 describe('Stonks UI Tests', { timeout: 60000 }, () => {
     let browser;
@@ -27,10 +27,7 @@ describe('Stonks UI Tests', { timeout: 60000 }, () => {
         });
         await new Promise(resolve => server.listen(PORT, resolve));
 
-        browser = await puppeteer.launch({
-            args: ['--no-sandbox', '--disable-web-security'],
-            headless: "new" 
-        });
+        browser = await launchBrowser();
         page = await browser.newPage();
 
         await page.setRequestInterception(true);

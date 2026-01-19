@@ -1,14 +1,14 @@
 const { test, describe, before, after, beforeEach } = require('node:test');
 const assert = require('node:assert');
-const puppeteer = require('puppeteer');
 const path = require('path');
+const { launchBrowser } = require('./helpers/browser');
 
 describe('Stats Logic & Calculation', () => {
     let browser;
     let page;
 
     before(async () => {
-        browser = await puppeteer.launch({ headless: 'new' });
+        browser = await launchBrowser();
     });
 
     after(async () => {

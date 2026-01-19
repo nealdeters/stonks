@@ -25,7 +25,8 @@ const initApp = async () => {
         }
         
         const data = await response.json();
-        const { sheetData, prices } = data;
+        const { sheetData, prices, isMarketOpen } = data;
+        window.isMarketOpen = isMarketOpen;
 
         currentPrizes = { benchmarks: {} };
         sheetData.prizes.forEach(p => {
@@ -238,17 +239,29 @@ function updateStats(results) {
     document.getElementById('last-updated').innerText = `SYNC: ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 }
 
-function updateMarketStatus() {
-    const now = new Date();
-    const nyTime = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hour12: false }).format(now);
-    const hour = parseInt(nyTime);
-    const day = now.getDay();
-    const isOpen = (day !== 0 && day !== 6) && hour >= 9 && hour < 16;
-    
+function updateMarketStatus(status) {
     const dot = document.getElementById('status-dot');
     const text = document.getElementById('status-text');
-    if (dot) dot.className = `h-2 w-2 rounded-full ${isOpen ? 'bg-emerald-500 animate-ping' : 'bg-red-500'}`;
-    if (text) text.innerText = isOpen ? "Market Open" : "Market Closed";
+    if (!dot || !text) return;
+
+    // 1. Determine the visual state
+    // We trust the backend's isMarketOpen boolean completely
+    const isOpen = status?.isMarketOpen === true;
+
+    if (isOpen) {
+        dot.className = "h-2 w-2 rounded-full bg-emerald-500 animate-ping";
+        text.innerText = "Market Open";
+    } else {
+        dot.className = "h-2 w-2 rounded-full bg-red-500";
+        
+        // 2. Determine the descriptive text
+        // If there's a holiday name, use it; otherwise, default to "Market Closed"
+        if (status?.holidayName) {
+            text.innerText = `Market Closed (${status.holidayName})`;
+        } else {
+            text.innerText = "Market Closed";
+        }
+    }
 }
 
 function updateTopMover(results) {

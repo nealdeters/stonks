@@ -1,0 +1,21 @@
+name: Finalize Contest
+on:
+  schedule:
+    - cron: '0 0 * * 1' # Runs every Monday
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm install
+      - name: Run Finalization
+        env:
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
+          GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}
+          FINNHUB_KEY: ${{ secrets.FINNHUB_KEY }}
+        run: |
+          # Only run if the contest is actually over
+          node scripts/finalize.js

@@ -1,14 +1,14 @@
 const { test, describe, before, after } = require('node:test');
 const assert = require('node:assert');
-const puppeteer = require('puppeteer');
 const path = require('path');
+const { launchBrowser } = require('./helpers/browser');
 
 describe('Winners UI Integration', () => {
     let browser;
     let page;
 
     before(async () => {
-        browser = await puppeteer.launch({ headless: 'new' });
+        browser = await launchBrowser();
         page = await browser.newPage();
     });
 
