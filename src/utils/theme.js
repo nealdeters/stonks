@@ -1,10 +1,20 @@
 const getThemeConfig = () => {
-    const isDecember = new Date().getMonth() === 11;
+    const month = new Date().getMonth();
+    const isDecember = month === 11;
+    const isNovember = month === 10;
+    const isSummer = [5, 6, 7].includes(month);
+
+    let color = isDecember ? 'emerald' : 'indigo';
+    let icon = isDecember ? '🎄' : (isNovember ? '🦃' : '🏁');
+    let topMoverIcon = isDecember ? '🎁' : (isNovember ? '🍂' : (isSummer ? '🏖️' : '🚀'));
+
     return {
         isDecember,
-        color: isDecember ? 'emerald' : 'indigo',
-        icon: isDecember ? '🎄' : '🏁',
-        topMoverIcon: isDecember ? '🎁' : '🚀'
+        isNovember,
+        isSummer,
+        color,
+        icon,
+        topMoverIcon
     };
 };
 
@@ -22,33 +32,60 @@ const applyGlobalTheme = () => {
             document.querySelectorAll('img[src*="icon"]').forEach(img => {
                 img.style.cursor = 'pointer';
                 img.onclick = () => window.location.href = '/';
+                img.classList.add('rounded-2xl');
             });
 
             const topMoverIconEl = document.getElementById('top-mover-icon');
             if (topMoverIconEl) topMoverIconEl.innerText = theme.topMoverIcon;
 
-            if (!theme.isDecember) return;
-
-            const replaceColor = (str) => str ? str.replace(/indigo/g, theme.color) : str;
+            if (theme.color !== 'indigo') {
+                const replaceColor = (str) => str ? str.replace(/indigo/g, theme.color) : str;
             
-            if (document.body) document.body.className = replaceColor(document.body.className);
-            
-            const header = document.querySelector('header');
-            if (header) header.className = replaceColor(header.className);
-            
-            document.querySelectorAll('[class*="indigo"]').forEach(el => {
-                el.className = replaceColor(el.className);
-            });
+                if (document.body) document.body.className = replaceColor(document.body.className);
+                
+                const header = document.querySelector('header');
+                if (header) header.className = replaceColor(header.className);
+                
+                document.querySelectorAll('[class*="indigo"]').forEach(el => {
+                    el.className = replaceColor(el.className);
+                });
+            }
 
-            const iconLink = document.querySelector("link[rel~='icon']");
-            if (iconLink) iconLink.href = '/icon-dec.png';
+            if (theme.isDecember) {
+                const iconLink = document.querySelector("link[rel~='icon']");
+                if (iconLink) iconLink.href = '/icon-dec-512.png';
 
-            const appleIcon = document.querySelector("link[rel='apple-touch-icon']");
-            if (appleIcon) appleIcon.href = '/icon-dec-512.png';
+                const appleIcon = document.querySelector("link[rel='apple-touch-icon']");
+                if (appleIcon) appleIcon.href = '/icon-dec-512.png';
 
-            document.querySelectorAll('img[src*="icon.png"]').forEach(img => {
-                img.src = '/icon-dec.png';
-            });
+                document.querySelectorAll('img[src*="icon.png"]').forEach(img => {
+                    img.src = '/icon-dec-512.png';
+                });
+            }
+
+            if (theme.isNovember) {
+                const iconLink = document.querySelector("link[rel~='icon']");
+                if (iconLink) iconLink.href = '/icon-nov.png';
+
+                const appleIcon = document.querySelector("link[rel='apple-touch-icon']");
+                if (appleIcon) appleIcon.href = '/icon-nov.png';
+
+                document.querySelectorAll('img[src*="icon.png"]').forEach(img => {
+                    img.src = '/icon-nov.png';
+                });
+            }
+
+            if (theme.isSummer) {
+                const iconLink = document.querySelector("link[rel~='icon']");
+                if (iconLink) iconLink.href = '/icon-summer-512.png';
+
+                const appleIcon = document.querySelector("link[rel='apple-touch-icon']");
+                if (appleIcon) appleIcon.href = '/icon-summer-512.png';
+
+                document.querySelectorAll('img[src*="icon.png"]').forEach(img => {
+                    img.src = '/icon-summer-512.png';
+                });
+            }
         };
 
         if (document.readyState === 'loading') {

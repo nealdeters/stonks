@@ -54,4 +54,7 @@ const _safelist = `
     bg-emerald-950/30 border-emerald-500/30 border-emerald-500/40 
     shadow-emerald-500/30 hover:border-emerald-500/50 hover:bg-emerald-500/5
     bg-emerald-500/5 border-emerald-500/10 text-emerald-400
+    bg-orange-950/30 border-orange-500/30 border-orange-500/40 
+    shadow-orange-500/30 hover:border-orange-500/50 hover:bg-orange-500/5
+    bg-orange-500/5 border-orange-500/10 text-orange-400
 `;
