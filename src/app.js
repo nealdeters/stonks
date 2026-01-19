@@ -65,14 +65,14 @@ const initApp = async () => {
         }).sort((a, b) => b.gainPct - a.gainPct);
 
         // 3. Render UI Components
-        renderLeaderboard(results);
+        renderLeaderboard(results, sheetData);
         updateStats(results);
         updateBenchmarks(prices);
         updateTopMover(results);
 
         // 4. Update Payment Button (Using the new 'controls' object)
         const controls = sheetData.controls;
-        console.log({ controls })
+
         if (controls?.payment_url) {
             const payBtn = document.getElementById('payment-btn');
             payBtn.innerText = controls.payment_text || 'Pay Entry Fee';
@@ -110,24 +110,56 @@ const initApp = async () => {
 
 /** * UI Rendering Functions 
  */
-function renderLeaderboard(results) {
+function renderLeaderboard(results, sheetData) {
     const container = document.getElementById('leaderboard-body');
-    if (!container) return;
+    if (!container || !results) return;
+
+    // 1. Pre-calculate career podium counts
+    const records = sheetData?.records || [];
+    const careerStats = {};
+
+    records.forEach(row => {
+        const uuid = row.user_uuid;
+        const place = parseInt(row.place);
+        if (!uuid || isNaN(place)) return;
+
+        if (!careerStats[uuid]) {
+            careerStats[uuid] = { gold: 0, silver: 0, bronze: 0 };
+        }
+
+        if (place === 1) careerStats[uuid].gold++;
+        if (place === 2) careerStats[uuid].silver++;
+        if (place === 3) careerStats[uuid].bronze++;
+    });
     
-    container.innerHTML = results.map((res, index) => `
+    container.innerHTML = results.map((res, index) => {
+        const stats = careerStats[res.user_uuid] || { gold: 0, silver: 0, bronze: 0 };
+
+        return `
         <tr class="block md:table-row hover:bg-indigo-500/10 transition-all border-b border-indigo-500/20 md:border-none">
             <td class="px-8 py-4 block md:table-cell">
                 <div class="flex items-center gap-4">
-                    <span class="text-xs font-mono text-indigo-400 font-bold">#${index + 1}</span>
-                    <div>
+                    <span class="text-xs font-mono text-indigo-400 font-bold w-6">#${index + 1}</span>
+                    
+                    <div class="flex flex-col gap-1.5">
                         <div class="flex items-center gap-2">
-                            <p class="font-black text-white text-base md:text-sm tracking-tight">${res.name}</p>
+                            <a href="/stats?uuid=${res.user_uuid}" class="text-white font-black hover:text-cyan-400 transition-all cursor-pointer group flex items-center gap-2">
+                                <span class="text-base md:text-sm tracking-tight">${res.name}</span>
+                                
+                                <span class="text-[8px] opacity-0 group-hover:opacity-100 transform translate-x-[-4px] group-hover:translate-x-0 transition-all bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30 text-indigo-300 whitespace-nowrap">
+                                    VIEW CAREER
+                                </span>
+                            </a>
                             ${res.legacy ? `<span class="bg-amber-500/20 text-amber-400 text-[8px] font-black px-1.5 py-0.5 rounded border border-amber-500/40 uppercase tracking-tighter">${res.legacy}</span>` : ''}
                         </div>
-                        ${getPrizeBadge(index, results.length)}
+
+                        <div class="flex flex-col gap-1.5">
+                            ${getPrizeBadge(index, results.length)}
+                        </div>
                     </div>
                 </div>
             </td>
+            
             <td class="px-8 py-3 md:py-5 block md:table-cell text-left md:text-center">
                 <span class="text-slate-400 text-[10px] uppercase font-black md:hidden pt-1">Stock</span>
                 <div class="flex flex-col items-end md:items-center">
@@ -135,6 +167,7 @@ function renderLeaderboard(results) {
                     <span class="text-[9px] text-slate-300 mt-2 font-bold uppercase tracking-widest truncate max-w-[100px]">${res.stockname}</span>
                 </div>
             </td>
+            
             <td class="px-8 py-3 md:py-5 block md:table-cell text-left md:text-right">
                 <span class="text-slate-400 text-[10px] uppercase font-black md:hidden">Investment</span>
                 <div class="flex flex-col items-end">
@@ -142,6 +175,7 @@ function renderLeaderboard(results) {
                     <p class="text-[10px] text-slate-400 font-mono">${(parseFloat(res.shares) || 0).toFixed(3)} @ $${(parseFloat(res.cost) || 0).toFixed(2)}</p>
                 </div>
             </td>
+            
             <td class="px-8 py-3 md:py-5 block md:table-cell text-left md:text-right">
                 <span class="text-slate-400 text-[10px] uppercase font-black md:hidden">Value</span>
                 <div class="flex flex-col items-end">
@@ -149,6 +183,7 @@ function renderLeaderboard(results) {
                     <p class="text-[10px] text-slate-400 font-mono">$${(res.currentPrice || 0).toFixed(2)}</p>
                 </div>
             </td>
+            
             <td class="px-8 py-5 block md:table-cell text-left md:text-right">
                 <span class="text-slate-400 text-[10px] uppercase font-black md:hidden">% Return</span>
                 <div class="flex flex-col items-end">
@@ -158,7 +193,8 @@ function renderLeaderboard(results) {
                 </div>
             </td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function updateBenchmarks(livePrices) {

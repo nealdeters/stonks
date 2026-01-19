@@ -1,14 +1,11 @@
 const initWinners = async () => {
     try {
-        console.log("Fetching Winners Data...");
         const response = await fetch(`/.netlify/functions/fetch-data?cb=${Date.now()}`);
         const data = await response.json();
         
         // Accessing the winners array
         const winners = data.sheetData?.winners || data.winners;
         const controls = data.sheetData?.controls || data.controls;
-
-        console.log("Data Received:", winners);
 
         // Update Header & Title
         if (controls?.title) {
