@@ -1,5 +1,5 @@
 /**
- * STONKS 2026 - PRIVATE API FRONTEND
+ * STONKS - PRIVATE API FRONTEND
  * Core Engine: Secure Data Integration
  */
 const UPDATE_INTERVAL = 5 * 60 * 1000;
@@ -15,8 +15,6 @@ const PRIZE_STYLES = {
 };
 
 const initApp = async () => {
-    updateMarketStatus();
-
     try {
         const response = await fetch(`/.netlify/functions/fetch-data?cb=${Date.now()}`);
         if (!response.ok) {
@@ -25,9 +23,12 @@ const initApp = async () => {
         }
         
         const data = await response.json();
-        const { sheetData, prices, isMarketOpen } = data;
-        window.isMarketOpen = isMarketOpen;
+        const { sheetData, prices, isMarketOpen, holidayName } = data;
+        
+        // Update global market status
+        updateMarketStatus({ isMarketOpen, holidayName });
 
+        // 1. Process Prizes
         currentPrizes = { benchmarks: {} };
         sheetData.prizes.forEach(p => {
             const rank = p.rank?.toString().toLowerCase();
@@ -37,7 +38,7 @@ const initApp = async () => {
             }
         });
 
-        // 1. Process Benchmarks
+        // 2. Process Benchmarks
         sheetData.benchmarks.forEach(b => {
             if (b.ticker) {
                 currentPrizes.benchmarks[b.ticker.toUpperCase()] = { 
@@ -47,63 +48,69 @@ const initApp = async () => {
             }
         });
 
-        // 2. Link Results & Calculate Performance
-        const results = sheetData.contestants.map(c => {
-            const live = prices.find(p => p.ticker === (c.ticker || '').toUpperCase());
-            const currentPrice = live?.price || 0;
-            const cost = parseFloat(c.cost) || 0;
-            const shares = parseFloat(c.shares) || 0;
+        // 3. Handle Empty State vs Active Leaderboard
+        const contestants = sheetData.contestants || [];
+        
+        if (contestants.length === 0 || (contestants.length === 1 && !contestants[0].ticker)) {
+            renderEmptyState();
+            updateStats([]); // Reset stats to zero
+            updateTopMover([]);
+        } else {
+            // Link Results & Calculate Performance
+            const results = contestants.map(c => {
+                const live = prices.find(p => p.ticker === (c.ticker || '').toUpperCase());
+                const currentPrice = live?.price || 0;
+                const cost = parseFloat(c.cost) || 0;
+                const shares = parseFloat(c.shares) || 0;
 
-            return {
-                ...c,
-                name: c.name || "Anonymous",
-                currentPrice,
-                marketValue: shares * currentPrice,
-                gainPct: cost > 0 ? ((currentPrice - cost) / cost) * 100 : 0,
-                dailyChange: live?.dp || 0,
-                stockname: live?.name || 'Stock'
-            };
-        }).sort((a, b) => b.gainPct - a.gainPct);
+                return {
+                    ...c,
+                    name: c.name || "Anonymous",
+                    currentPrice,
+                    marketValue: shares * currentPrice,
+                    gainPct: cost > 0 ? ((currentPrice - cost) / cost) * 100 : 0,
+                    dailyChange: live?.dp || 0,
+                    stockname: live?.name || 'Stock'
+                };
+            }).sort((a, b) => b.gainPct - a.gainPct);
 
-        // 3. Render UI Components
-        renderLeaderboard(results, sheetData);
-        updateStats(results);
+            renderLeaderboard(results, sheetData);
+            updateStats(results);
+            updateTopMover(results);
+        }
+
+        // 4. Update Global UI Components
         updateBenchmarks(prices);
-        updateTopMover(results);
 
-        // 4. Update Payment Button (Using the new 'controls' object)
+        // 5. Update Payment Button & Title from Controls
         const controls = sheetData.controls;
+        if (controls) {
+            if (controls.payment_url) {
+                const payBtn = document.getElementById('payment-btn');
+                payBtn.innerText = controls.payment_text || 'Pay Entry Fee';
+                window.payment_url = controls.payment_url;
+            }
 
-        if (controls?.payment_url) {
-            const payBtn = document.getElementById('payment-btn');
-            payBtn.innerText = controls.payment_text || 'Pay Entry Fee';
-            window.payment_url = controls.payment_url;
-        }
+            if (controls.cutoff) {
+                const now = new Date();
+                const regCutoff = new Date(controls.cutoff);
+                const addBtn = document.getElementById('add-participant-btn');
 
-        // 5. Handle Registration Cutoff (Using the new 'controls' object)
-        if (controls?.cutoff) {
-            const now = new Date();
-            const regCutoff = new Date(controls.cutoff);
-            const addBtn = document.getElementById('add-participant-btn');
+                if (now > regCutoff && addBtn) {
+                    addBtn.disabled = true;
+                    addBtn.innerText = "Registration Closed";
+                    addBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    addBtn.onclick = null;
+                }
+            }
 
-            if (now > regCutoff && addBtn) {
-                addBtn.disabled = true;
-                addBtn.innerText = "Registration Closed";
-                addBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                addBtn.onclick = null;
+            if (controls.title) {
+                document.title = controls.title;
+                const mainTitleEl = document.querySelector('header h1');
+                if (mainTitleEl) mainTitleEl.innerText = controls.title;
             }
         }
 
-        if (controls?.title) {
-            // Update the Browser Tab Title
-            document.title = controls.title;
-
-            // Update the Header H1
-            const mainTitleEl = document.querySelector('header h1');
-            if (mainTitleEl) {
-                mainTitleEl.innerText = controls.title;
-            }
-        }
     } catch (err) {
         console.error("Critical System Failure:", err);
     }
@@ -111,64 +118,59 @@ const initApp = async () => {
 
 /** * UI Rendering Functions 
  */
+function renderEmptyState() {
+    const container = document.getElementById('dashboard-content');
+    container.innerHTML = `
+        <div class="bg-indigo-950/20 border border-indigo-500/20 rounded-[40px] p-12 text-center my-8">
+            <div class="text-6xl mb-6">🏁</div>
+            <h2 class="text-2xl font-black text-white uppercase tracking-tight mb-3">Season Intermission</h2>
+            <p class="text-indigo-300/70 max-w-md mx-auto mb-8 font-medium">
+                The previous contest has concluded and the board has been cleared. 
+                Check the Hall of Fame for past winners while we prepare for the next round!
+            </p>
+            <div class="flex justify-center gap-4">
+                <button onclick="openEntryForm()" class="bg-gradient-to-r from-violet-500 to-indigo-500 px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all">
+                    Be the first to join
+                </button>
+            </div>
+        </div>
+    `;
+}
+
 function renderLeaderboard(results, sheetData) {
     const container = document.getElementById('leaderboard-body');
-    if (!container || !results) return;
+    if (!container) return;
 
-    // 1. Pre-calculate career podium counts
     const records = sheetData?.records || [];
-    const careerStats = {};
-
-    records.forEach(row => {
-        const uuid = row.user_uuid;
-        const place = parseInt(row.place);
-        if (!uuid || isNaN(place)) return;
-
-        if (!careerStats[uuid]) {
-            careerStats[uuid] = { gold: 0, silver: 0, bronze: 0 };
-        }
-
-        if (place === 1) careerStats[uuid].gold++;
-        if (place === 2) careerStats[uuid].silver++;
-        if (place === 3) careerStats[uuid].bronze++;
-    });
     
     container.innerHTML = results.map((res, index) => {
-        const stats = careerStats[res.user_uuid] || { gold: 0, silver: 0, bronze: 0 };
-
         return `
         <tr class="block md:table-row hover:bg-indigo-500/10 transition-all border-b border-indigo-500/20 md:border-none">
             <td class="px-8 py-4 block md:table-cell">
                 <div class="flex items-center gap-4">
                     <span class="text-xs font-mono text-indigo-400 font-bold w-6">#${index + 1}</span>
-                    
                     <div class="flex flex-col gap-1.5">
                         <div class="flex items-center gap-2">
                             <a href="/stats?uuid=${res.user_uuid}" class="text-white font-black hover:text-cyan-400 transition-all cursor-pointer group flex items-center gap-2">
                                 <span class="text-base md:text-sm tracking-tight">${res.name}</span>
-                                
                                 <span class="text-[8px] opacity-0 group-hover:opacity-100 transform translate-x-[-4px] group-hover:translate-x-0 transition-all bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30 text-indigo-300 whitespace-nowrap">
                                     VIEW CAREER
                                 </span>
                             </a>
-                            ${res.legacy ? `<span class="bg-amber-500/20 text-amber-400 text-[8px] font-black px-1.5 py-0.5 rounded border border-amber-500/40 uppercase tracking-tighter">${res.legacy}</span>` : ''}
                         </div>
-
                         <div class="flex flex-col gap-1.5">
                             ${getPrizeBadge(index, results.length)}
                         </div>
                     </div>
                 </div>
             </td>
-            
             <td class="px-8 py-3 md:py-5 block md:table-cell text-left md:text-center">
                 <span class="text-slate-400 text-[10px] uppercase font-black md:hidden pt-1">Stock</span>
                 <div class="flex flex-col items-end md:items-center">
-                    <span class="bg-indigo-500/20 text-indigo-200 px-2.5 py-1 rounded text-[10px] font-black tracking-widest leading-none border border-indigo-500/30">${res.ticker}</span>
+                    <span class="bg-indigo-500/20 text-indigo-200 px-2.5 py-1 rounded text-[10px] font-black tracking-widest border border-indigo-500/30">${res.ticker}</span>
                     <span class="text-[9px] text-slate-300 mt-2 font-bold uppercase tracking-widest truncate max-w-[100px]">${res.stockname}</span>
                 </div>
             </td>
-            
             <td class="px-8 py-3 md:py-5 block md:table-cell text-left md:text-right">
                 <span class="text-slate-400 text-[10px] uppercase font-black md:hidden">Investment</span>
                 <div class="flex flex-col items-end">
@@ -176,7 +178,6 @@ function renderLeaderboard(results, sheetData) {
                     <p class="text-[10px] text-slate-400 font-mono">${(parseFloat(res.shares) || 0).toFixed(3)} @ $${(parseFloat(res.cost) || 0).toFixed(2)}</p>
                 </div>
             </td>
-            
             <td class="px-8 py-3 md:py-5 block md:table-cell text-left md:text-right">
                 <span class="text-slate-400 text-[10px] uppercase font-black md:hidden">Value</span>
                 <div class="flex flex-col items-end">
@@ -184,7 +185,6 @@ function renderLeaderboard(results, sheetData) {
                     <p class="text-[10px] text-slate-400 font-mono">$${(res.currentPrice || 0).toFixed(2)}</p>
                 </div>
             </td>
-            
             <td class="px-8 py-5 block md:table-cell text-left md:text-right">
                 <span class="text-slate-400 text-[10px] uppercase font-black md:hidden">% Return</span>
                 <div class="flex flex-col items-end">
@@ -244,29 +244,22 @@ function updateMarketStatus(status) {
     const text = document.getElementById('status-text');
     if (!dot || !text) return;
 
-    // 1. Determine the visual state
-    // We trust the backend's isMarketOpen boolean completely
-    const isOpen = status?.isMarketOpen === true;
-
-    if (isOpen) {
+    if (status?.isMarketOpen) {
         dot.className = "h-2 w-2 rounded-full bg-emerald-500 animate-ping";
         text.innerText = "Market Open";
     } else {
         dot.className = "h-2 w-2 rounded-full bg-red-500";
-        
-        // 2. Determine the descriptive text
-        // If there's a holiday name, use it; otherwise, default to "Market Closed"
-        if (status?.holidayName) {
-            text.innerText = `Market Closed (${status.holidayName})`;
-        } else {
-            text.innerText = "Market Closed";
-        }
+        text.innerText = status?.holidayName ? `Market Closed (${status.holidayName})` : "Market Closed";
     }
 }
 
 function updateTopMover(results) {
-    const top = [...results].sort((a, b) => b.dailyChange - a.dailyChange)[0];
     const el = document.getElementById('top-mover-name');
+    if (results.length === 0) {
+        if (el) el.innerText = "N/A";
+        return;
+    }
+    const top = [...results].sort((a, b) => b.dailyChange - a.dailyChange)[0];
     if (top && el) el.innerText = `${top.name} (+${top.dailyChange.toFixed(2)}%)`;
 }
 
