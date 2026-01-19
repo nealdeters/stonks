@@ -1,7 +1,7 @@
 const axios = require('axios');
 const { JWT } = require('google-auth-library');
 const googleSheets = require('@googleapis/sheets');
-const { parseRows } = require('../../src/utils/helpers');
+const { SHEETS, getRange, parseRows } = require('../../src/utils/helpers');
 
 const HEADERS = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
 
@@ -15,12 +15,12 @@ exports.handler = async () => {
     });
 
     const ranges = [
-        'Contestants!A:Z', 
-        'Benchmarks!A:Z',
-        'Controls!A:Z', 
-        'Users!A:Z',
-        'Prizes!A:Z', 
-        'Records!A:Z',
+        getRange(SHEETS.CONTESTANTS),
+        getRange(SHEETS.BENCHMARKS),
+        getRange(SHEETS.CONTROLS),
+        getRange(SHEETS.USERS),
+        getRange(SHEETS.PRIZES),
+        getRange(SHEETS.RECORDS),
     ];
 
     try {

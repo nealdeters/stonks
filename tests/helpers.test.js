@@ -1,6 +1,6 @@
 const { test, describe } = require('node:test');
 const assert = require('node:assert');
-const { isContestOver, isRegistrationClosed } = require('../src/utils/helpers');
+const { SHEETS, getRange, isContestOver, isRegistrationClosed } = require('../src/utils/helpers');
 
 describe('Date Utility Logic', () => {
     
@@ -19,5 +19,28 @@ describe('Date Utility Logic', () => {
 
     test('Registration is open before cutoff', () => {
         assert.strictEqual(isRegistrationClosed('2026-01-01', '2026-02-01'), false);
+    });
+
+    describe('getRange', () => {
+        test('should return the correct range with default columns', () => {
+            const result = getRange(SHEETS.CONTROLS);
+            assert.strictEqual(result, 'Controls!A:Z');
+        });
+
+        test('should return the correct range with custom columns', () => {
+            const result = getRange(SHEETS.USERS, 'B:E');
+            assert.strictEqual(result, 'Users!B:E');
+        });
+
+        test('should handle different sheet constants correctly', () => {
+            assert.strictEqual(getRange(SHEETS.CONTESTANTS), 'Contestants!A:Z');
+            assert.strictEqual(getRange(SHEETS.BENCHMARKS), 'Benchmarks!A:Z');
+        });
+
+        test('should handle manual string input if constant is not used', () => {
+            // This ensures the function isn't strictly tied to the object
+            const result = getRange('CustomSheet', 'A1:B10');
+            assert.strictEqual(result, 'CustomSheet!A1:B10');
+        });
     });
 });

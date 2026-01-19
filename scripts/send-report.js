@@ -3,7 +3,7 @@ const { JWT } = require('google-auth-library');
 const googleSheets = require('@googleapis/sheets');
 const fs = require('fs');
 const path = require('path');
-const { isContestOver } = require('../src/utils/helpers');
+const { SHEETS, getRange, isContestOver } = require('../src/utils/helpers');
 
 async function run() {
     const force = process.argv.includes('--force');
@@ -32,7 +32,7 @@ async function run() {
     try {
         const controlsRes = await sheets.spreadsheets.values.get({ 
             spreadsheetId: sheetId, 
-            range: 'Controls!A:Z' 
+            range: getRange(SHEETS.CONTROLS)
         });
         const controlRows = controlsRes.data.values || [];
         const headersControl = controlRows[0];
@@ -47,7 +47,7 @@ async function run() {
         if (recipients.length === 0) {
             const contestantsRes = await sheets.spreadsheets.values.get({
                 spreadsheetId: sheetId,
-                range: 'Contestants!A:Z'
+                range: getRange(SHEETS.CONTESTANTS)
             });
             const rows = contestantsRes.data.values || [];
             const headers = rows[0].map(h => h.toLowerCase().trim());

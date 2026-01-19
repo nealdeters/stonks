@@ -18,4 +18,15 @@ function parseRows (valueSet) {
     return rows.map(row => Object.fromEntries(headers.map((h, i) => [h.toLowerCase(), row[i] || null])));
 };
 
-module.exports = { isContestOver, isRegistrationClosed, parseRows };
+const SHEETS = {
+    CONTROLS: 'Controls',
+    CONTESTANTS: 'Contestants',
+    USERS: 'Users',
+    BENCHMARKS: 'Benchmarks',
+    PRIZES: 'Prizes',
+    RECORDS: 'Records',
+};
+
+function getRange(sheetName, columns = 'A:Z') { return `${sheetName}!${columns}` };
+
+module.exports = { SHEETS, isContestOver, isRegistrationClosed, parseRows, getRange };

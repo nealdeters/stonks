@@ -2,7 +2,7 @@ const axios = require('axios');
 const { JWT } = require('google-auth-library');
 const googleSheets = require('@googleapis/sheets');
 const crypto = require('crypto');
-const { isRegistrationClosed } = require('../../src/utils/helpers');
+const { SHEETS, getRange, isRegistrationClosed } = require('../../src/utils/helpers');
 
 const HEADERS = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
 const INVESTMENT = 5000;
@@ -37,7 +37,11 @@ exports.handler = async (event) => {
     }
 
     const sheets = googleSheets.sheets({ version: 'v4', auth });
-    const ranges = ['Users!A:Z', 'Contestants!A:Z', 'Controls!A:Z'];
+    const ranges = [
+        getRange(SHEETS.USERS),
+        getRange(SHEETS.CONTESTANTS),
+        getRange(SHEETS.CONTROLS),
+    ];
 
     try {
         const data = await sheets.spreadsheets.values.batchGet({
@@ -76,7 +80,7 @@ exports.handler = async (event) => {
             userUuid = crypto.randomUUID();
             await sheets.spreadsheets.values.append({
                 spreadsheetId: SHEET_ID,
-                range: 'Users!A:Z',
+                range: getRange(SHEETS.USERS),
                 valueInputOption: 'USER_ENTERED',
                 resource: { values: [[userUuid, name, email]] }
             });
@@ -120,7 +124,7 @@ exports.handler = async (event) => {
 
         await sheets.spreadsheets.values.append({
             spreadsheetId: SHEET_ID,
-            range: 'Contestants!A:F',
+            range: getRange(SHEETS.CONTESTANTS),
             valueInputOption: 'USER_ENTERED',
             resource: { values: [[userUuid, name, email, ticker.toUpperCase(), INVESTMENT, price, shares]] }
         });

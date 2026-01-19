@@ -1,7 +1,7 @@
 const { Resend } = require('resend');
 const { JWT } = require('google-auth-library');
 const googleSheets = require('@googleapis/sheets');
-const { isRegistrationClosed } = require('../src/utils/helpers');
+const { SHEETS, getRange, isRegistrationClosed } = require('../src/utils/helpers');
 
 async function run() {
     const force = process.argv.includes('--force');
@@ -21,7 +21,7 @@ async function run() {
     try {
         // 1. Get Controls (Title, Cutoff, Payment URL)
         const controlsRes = await sheets.spreadsheets.values.get({ 
-            spreadsheetId: sheetId, range: 'Controls!A:Z' 
+            spreadsheetId: sheetId, range: getRange(SHEETS.CONTROLS) 
         });
         const controlRows = controlsRes.data.values || [];
         const headersControl = controlRows[0];
@@ -33,6 +33,7 @@ async function run() {
             return;
         }
 
+        const ranges = [getRange(SHEETS.USERS), getRange(SHEETS.CONTESTANTS)]
         let recipients = [];
 
         // 2. Handle Manual Override vs. Smart List
@@ -41,7 +42,7 @@ async function run() {
         } else {
             const data = await sheets.spreadsheets.values.batchGet({
                 spreadsheetId: sheetId,
-                ranges: ['Users!A:Z', 'Contestants!A:Z']
+                ranges: ranges,
             });
 
             const allUsers = data.data.valueRanges[0].values || [];
