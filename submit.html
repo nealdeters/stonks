@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Stonks - Entry Form</title>
+    <link rel="icon" type="image/png" href="/icon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="src/style.css">
+</head>
+<body class="bg-[#020617] text-white min-h-screen flex flex-col items-center justify-center p-6">
+
+    <main class="w-full max-w-md bg-indigo-950/20 border border-indigo-500/20 p-8 rounded-[2.5rem] shadow-2xl backdrop-blur-sm">
+        
+        <form id="entryForm" name="contest-entry" method="POST" data-netlify="true" netlify-honeypot="bot-field" class="space-y-6">
+            <input type="hidden" name="form-name" value="contest-entry" />
+            
+            <p class="hidden">
+                <label>Don’t fill this out if you're human: <input name="bot-field" /></label>
+            </p>
+
+            <div>
+                <label for="name" class="text-[10px] text-indigo-300/50 uppercase font-black tracking-widest mb-2 block ml-1">Name</label>
+                <input type="text" id="name" name="name" required 
+                       class="w-full bg-[#020617] border border-indigo-500/20 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400 transition-all placeholder-indigo-300/20"
+                       placeholder="e.g. Jane Doe">
+            </div>
+
+            <div>
+                <label for="email" class="text-[10px] text-indigo-300/50 uppercase font-black tracking-widest mb-2 block ml-1">Email</label>
+                <input type="email" id="email" name="email" required 
+                       class="w-full bg-[#020617] border border-indigo-500/20 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400 transition-all placeholder-indigo-300/20"
+                       placeholder="your@email.com">
+            </div>
+
+            <div>
+                <label for="ticker" class="text-[10px] text-indigo-300/50 uppercase font-black tracking-widest mb-2 block ml-1">Ticker</label>
+                <input type="text" id="ticker" name="ticker" required 
+                       class="w-full bg-[#020617] border border-indigo-500/20 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400 transition-all placeholder-indigo-300/20 uppercase"
+                       placeholder="e.g. NVDA">
+            </div>
+
+            <div>
+                <label for="secret" class="text-[10px] text-indigo-300/50 uppercase font-black tracking-widest mb-2 block ml-1">Access Secret</label>
+                <input type="password" id="secret" name="secret" required 
+                    class="w-full bg-[#020617] border border-indigo-500/20 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-violet-400 transition-all placeholder-indigo-300/20"
+                    placeholder="••••••••">
+            </div>
+
+            <div id="error-message" class="hidden text-red-400 text-[10px] font-black uppercase text-center bg-red-500/10 p-3 rounded-xl border border-red-500/20"></div>
+
+            <button type="submit" id="submit-btn" class="w-full bg-gradient-to-r from-violet-500 to-cyan-500 py-5 rounded-2xl font-black uppercase tracking-widest text-sm shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-all hover:opacity-90">
+                Register Entry
+            </button>
+        </form>
+
+        <div class="mt-8 text-center">
+            <a href="/" class="text-[9px] text-indigo-300/40 uppercase font-black tracking-widest hover:text-indigo-300 transition-colors flex items-center justify-center gap-2">
+                <span>←</span> Back to Dashboard
+            </a>
+        </div>
+    </main>
+
+<script>
+    const entryForm = document.getElementById('entryForm');
+    if (entryForm) {
+        entryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submit-btn');
+            const errEl = document.getElementById('error-message');
+            const formData = new FormData(e.target);
+            
+            btn.disabled = true;
+            const originalText = btn.innerText;
+            btn.innerText = "Processing...";
+            errEl.classList.add('hidden');
+
+            try {
+                // POINT DIRECTLY TO THE FUNCTION
+                const response = await fetch("/.netlify/functions/process-entry", {
+                    method: "POST",
+                    body: new URLSearchParams(formData).toString(),
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" }
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    window.location.href = "/?submitted=true";
+                } else {
+                    throw new Error(result.error || "System Error");
+                }
+            } catch (error) {
+                btn.disabled = false;
+                btn.innerText = originalText;
+                errEl.innerText = error.message;
+                errEl.classList.remove('hidden');
+            }
+        });
+    }
+</script>
+</body>
+</html>

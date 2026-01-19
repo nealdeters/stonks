@@ -38,42 +38,29 @@ describe('Stonks UI Tests', { timeout: 60000 }, () => {
             const url = req.url();
 
             if (url.includes('get-prices')) {
-                const body = !url.includes('tickers=') 
-                    ? { 
-                        sheetId: 'MOCK_ID', 
-                        config: { paymentButtonText: 'Pay Entry Fee', paymentUrl: 'https://venmo.com/test' } 
-                      }
-                    : { prices: [
-                        { ticker: 'AAPL', price: 150.00, dp: 5.0, name: 'Apple Inc' },
-                        { ticker: 'TSLA', price: 50.00, dp: -2.0, name: 'Tesla' },
-                        { ticker: 'SPY', price: 420.00, dp: 0.5, name: 'S&P 500' }
-                      ]};
-                return req.respond({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
-            }
+                const mockResponse = {
+                    sheetData: {
+                        contestants: [
+                            { useruuid: 'u1', name: 'Alice', ticker: 'AAPL', capital: '5000', cost: '100', shares: '50' },
+                            { useruuid: 'u2', name: 'Bob', ticker: 'TSLA', capital: '5000', cost: '200', shares: '25' }
+                        ],
+                        records: [],
+                        prizes: [{ rank: '1', emoji: '🥇', amount: '$100' }],
+                        benchmarks: [{ ticker: 'VOO', name: 'S&P 500', startprice: '500' }],
+                        payment: { paymentbuttontext: 'PAY ENTRY FEE', paymenturl: 'https://venmo.com' }
+                    },
+                    prices: [
+                        { ticker: 'AAPL', price: 110.00, dp: 2.5, name: 'Apple' },
+                        { ticker: 'TSLA', price: 190.00, dp: -1.2, name: 'Tesla' },
+                        { ticker: 'VOO', price: 510.00, dp: 0.5, name: 'Vanguard S&P 500' }
+                    ]
+                };
 
-            if (url.includes('gviz/tq')) {
-                let data = { table: { cols: [], rows: [] } };
-                // FIX: Match the "Contestants" tab name and "Flat Data" structure
-                if (url.includes('Contestants')) {
-                    data.table = {
-                        cols: [{label: 'Name'}, {label: 'Ticker'}, {label: 'Shares'}, {label: 'Cost'}, {label: 'Capital'}, {label: 'user_uuid'}],
-                        rows: [
-                            { c: [{v: 'Alice'}, {v: 'AAPL'}, {v: 10}, {v: 100}, {v: 1000}, {v: 'u1'}] },
-                            { c: [{v: 'Bob'}, {v: 'TSLA'}, {v: 10}, {v: 100}, {v: 1000}, {v: 'u2'}] }
-                        ]
-                    };
-                } else if (url.includes('Benchmarks')) {
-                    data.table = {
-                        cols: [{label: 'Ticker'}, {label: 'Name'}, {label: 'startprice'}],
-                        rows: [{ c: [{v: 'SPY'}, {v: 'S&P 500'}, {v: 400}] }]
-                    };
-                } else {
-                    // Default for Records/Payment tabs
-                    data.table = { cols: [{label: 'key'}], rows: [] };
-                }
-                
-                const gvizResponse = `/*O_o*/\ngoogle.visualization.Query.setResponse(${JSON.stringify(data)});`;
-                return req.respond({ status: 200, contentType: 'text/javascript', body: gvizResponse });
+                return req.respond({
+                    status: 200,
+                    contentType: 'application/json',
+                    body: JSON.stringify(mockResponse)
+                });
             }
 
             req.continue();

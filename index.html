@@ -28,9 +28,12 @@
                 </div>
             </div>
             
-            <div class="flex items-center gap-4 shrink-0">
-                <button id="payment-btn" onclick="triggerPayment()" class="btn-secondary px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 whitespace-nowrap">
-                    Syncing...
+            <div class="flex items-center gap-2 md:gap-4 flex-wrap justify-center shrink-0">
+                <button id="payment-btn" onclick="triggerPayment()" class="btn-secondary px-4 md:px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 whitespace-nowrap">
+                    Pay Entry Fee
+                </button>
+                <button id="add-participant-btn" onclick="openEntryForm()" class="btn-secondary px-4 md:px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 whitespace-nowrap">
+                    Add Participant
                 </button>
                 <div id="last-updated" class="text-[10px] text-indigo-400/70 uppercase tracking-widest font-bold bg-indigo-950/30 px-4 py-2 rounded-lg border border-indigo-500/20 whitespace-nowrap">
                     SYNCING...
@@ -73,9 +76,9 @@
                     <tr>
                         <th class="px-8">Participant</th>
                         <th class="px-8 text-center">Stock</th>
-                        <th class="px-8 text-center">Investment</th>
-                        <th class="px-8 text-center">Value</th>
-                        <th class="px-8 text-center">% Return</th>
+                        <th class="px-8 text-right">Investment</th>
+                        <th class="px-8 text-right">Value</th>
+                        <th class="px-8 text-right">% Return</th>
                     </tr>
                 </thead>
                 <tbody id="leaderboard-body" class="block md:table-row-group divide-y divide-indigo-500/10"></tbody>

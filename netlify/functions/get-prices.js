@@ -1,109 +1,123 @@
 const axios = require('axios');
-
-let globalCache = {};
-const CACHE_DURATION = 5 * 60 * 1000; 
+const { JWT } = require('google-auth-library');
+const googleSheets = require('@googleapis/sheets');
 
 const HEADERS = {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*"
 };
 
+async function fetchPrivateSheetData(auth, spreadsheetId) {
+    const sheets = googleSheets.sheets({ version: 'v4', auth });
+    const ranges = [
+        'Contestants!A:Z', 
+        'Records!A:Z', 
+        'Prizes!A:Z', 
+        'Benchmarks!A:Z', 
+        'Payment!A:Z'
+    ];
+
+    const response = await sheets.spreadsheets.values.batchGet({
+        spreadsheetId,
+        ranges,
+    });
+
+    const parseRows = (valueSet) => {
+        if (!valueSet || !valueSet.values || valueSet.values.length === 0) return [];
+        const [headers, ...rows] = valueSet.values;
+        const normalizedHeaders = headers.map(h => h.toLowerCase().replace(/[\s_]/g, ''));
+        return rows.map(row => {
+            const obj = {};
+            normalizedHeaders.forEach((h, i) => {
+                obj[h] = row[i] !== undefined ? row[i] : null;
+            });
+            return obj;
+        });
+    };
+
+    return {
+        contestants: parseRows(response.data.valueRanges[0]),
+        records: parseRows(response.data.valueRanges[1]),
+        prizes: parseRows(response.data.valueRanges[2]),
+        benchmarks: parseRows(response.data.valueRanges[3]),
+        payment: parseRows(response.data.valueRanges[4])[0] || {}
+    };
+}
+
 exports.handler = async (event) => {
     const API_KEY = process.env.FINNHUB_KEY;
     const SHEET_ID = process.env.SHEET_ID;
+    const GOOGLE_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+    const GOOGLE_KEY = process.env.GOOGLE_PRIVATE_KEY;
 
-    let rawTickers = event.queryStringParameters?.tickers || '';
-    if (Array.isArray(rawTickers)) rawTickers = rawTickers.join(',');
-
-    const tickers = rawTickers.split(',')
-        .map(t => t.trim().toUpperCase())
-        .filter(t => t.length > 0);
-
-    // --- HANDSHAKE MODE ---
-    if (tickers.length === 0) {
-        try {
-            const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Payment`;
-            const res = await axios.get(url);
-            const text = res.data;
-            const json = JSON.parse(text.substring(47).slice(0, -2));
-            
-            const row = json.table.rows[0].c;
-            const config = {
-                entryFee: row[0]?.v || 0,
-                username: row[1]?.v || '',
-                paymentUrl: row[2]?.v || '',
-                paymentButtonText: row[3]?.v || 'Pay Entry Fee'
-            };
-
-            return {
-                statusCode: 200,
-                headers: HEADERS,
-                body: JSON.stringify({ sheetId: SHEET_ID, config, prices: [], cached: false })
-            };
-        } catch (err) {
-            console.error("Payment Config Fetch Error:", err.message);
-            return {
-                statusCode: 200,
-                headers: HEADERS,
-                body: JSON.stringify({ sheetId: SHEET_ID, prices: [], cached: false })
-            };
-        }
-    }
-
-    const forceRefresh = event.queryStringParameters?.refresh === 'true';
-    const cacheKey = [...tickers].sort().join(',');
-    const now = Date.now();
-
-    if (!forceRefresh && globalCache[cacheKey] && (now - globalCache[cacheKey].time < CACHE_DURATION)) {
+    if (!GOOGLE_EMAIL || !GOOGLE_KEY) {
         return { 
-            statusCode: 200, 
-            headers: HEADERS,
-            body: JSON.stringify({ prices: globalCache[cacheKey].data, sheetId: SHEET_ID, cached: true })
+            statusCode: 500, 
+            headers: HEADERS, 
+            body: JSON.stringify({ 
+                error: "Config Error", 
+                message: `Missing Environment Variables. Email: ${!!GOOGLE_EMAIL}, Key: ${!!GOOGLE_KEY}` 
+            }) 
         };
     }
 
     try {
-        // Fetch Symbol List separately to keep price indexing clean
-        let symbolMap = new Map();
-        try {
-            const symbolListResult = await axios.get(`https://finnhub.io/api/v1/stock/symbol?exchange=US&token=${API_KEY}`);
-            if (Array.isArray(symbolListResult.data)) {
-                symbolListResult.data.forEach(item => symbolMap.set(item.symbol, item.description));
-            }
-        } catch (e) {
-            console.error("Symbol List Fetch Failed");
-        }
+        const formattedKey = GOOGLE_KEY.replace(/\\n/g, '\n');
 
-        const priceRequests = tickers.map(symbol => 
-            axios.get(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${API_KEY}`)
+        const auth = new JWT({
+            email: GOOGLE_EMAIL,
+            key: formattedKey,
+            scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+        });
+
+        const sheetData = await fetchPrivateSheetData(auth, SHEET_ID);
+
+        const tickers = [...new Set([
+            ...sheetData.contestants.map(c => (c.ticker || '').toUpperCase()),
+            ...sheetData.benchmarks.map(b => (b.ticker || '').toUpperCase())
+        ])].filter(t => t.length > 0);
+
+        const priceRequests = tickers.map(t => 
+            axios.get(`https://finnhub.io/api/v1/quote?symbol=${t}&token=${API_KEY}`)
         );
         
-        const priceResults = await Promise.allSettled(priceRequests);
+        const symbolListRequest = axios.get(`https://finnhub.io/api/v1/stock/symbol?exchange=US&token=${API_KEY}`);
 
-        const data = tickers.map((symbol, i) => {
-            const result = priceResults[i];
-            const priceData = result.status === 'fulfilled' ? result.value.data : {};
+        const [symbolListResult, ...priceResults] = await Promise.all([
+            symbolListRequest,
+            ...priceRequests
+        ]);
 
+        const symbolMap = new Map(
+            Array.isArray(symbolListResult.data) ? symbolListResult.data.map(item => [item.symbol, item.description]) : []
+        );
+
+        const prices = tickers.map((ticker, i) => {
+            const res = priceResults[i];
             return {
-                ticker: symbol,
-                name: symbolMap.get(symbol) || symbol, 
-                price: priceData.c || 0,
-                dp: priceData.dp || 0
+                ticker,
+                name: symbolMap.get(ticker) || ticker,
+                price: res.data?.c || 0,
+                dp: res.data?.dp || 0
             };
         });
 
-        globalCache[cacheKey] = { data: data, time: now };
-
-        return { 
-            statusCode: 200, 
+        return {
+            statusCode: 200,
             headers: HEADERS,
-            body: JSON.stringify({ prices: data, sheetId: SHEET_ID, cached: false })
+            body: JSON.stringify({ sheetData, prices, lastUpdated: new Date().toISOString() })
         };
-    } catch (error) {
-        return { 
-            statusCode: 500, 
+
+    } catch (err) {
+        console.error("Function Execution Error:", err.message);
+        return {
+            statusCode: 500,
             headers: HEADERS,
-            body: JSON.stringify({ error: "Internal Server Error", sheetId: SHEET_ID }) 
+            body: JSON.stringify({ 
+                error: "Fetch Error", 
+                message: err.message,
+                hint: "Ensure the Service Account email has been shared with the Google Sheet."
+            })
         };
     }
 };
