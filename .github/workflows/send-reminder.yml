@@ -1,0 +1,37 @@
+name: Contest Reminder
+on:
+  schedule:
+    - cron: '0 23 15 1 *' # January 15th
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Send even if registration is closed'
+        type: boolean
+        default: false
+      emails:
+        description: 'Manual recipients (optional override)'
+        type: string
+        required: false
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm install resend @googleapis/sheets
+      - name: Send Reminder
+        run: |
+          FLAGS=""
+          [[ "${{ github.event.inputs.force }}" == "true" ]] && FLAGS="$FLAGS --force"
+          [[ -n "${{ github.event.inputs.emails }}" ]] && FLAGS="$FLAGS --to=${{ github.event.inputs.emails }}"
+          node scripts/send-reminder.js $FLAGS
+        env:
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+          GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}
+          GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}

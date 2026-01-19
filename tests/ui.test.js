@@ -37,7 +37,7 @@ describe('Stonks UI Tests', { timeout: 60000 }, () => {
         page.on('request', async (req) => {
             const url = req.url();
 
-            if (url.includes('get-prices')) {
+            if (url.includes('fetch-data')) {
                 const mockResponse = {
                     sheetData: {
                         contestants: [
@@ -102,4 +102,6 @@ describe('Stonks UI Tests', { timeout: 60000 }, () => {
         const buttonText = await page.$eval('#payment-btn', el => el.innerText.trim().toUpperCase());
         assert.strictEqual(buttonText, 'PAY ENTRY FEE');
     });
+
+    // test proving payment entry fee button directs where needed
 });

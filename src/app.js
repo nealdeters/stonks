@@ -15,11 +15,10 @@ const PRIZE_STYLES = {
 };
 
 const initApp = async () => {
-    updateDynamicYear();
     updateMarketStatus();
 
     try {
-        const response = await fetch(`/.netlify/functions/get-prices?cb=${Date.now()}`);
+        const response = await fetch(`/.netlify/functions/fetch-data?cb=${Date.now()}`);
         if (!response.ok) {
             const errData = await response.json();
             throw new Error(errData.message || "Network response was not ok");
@@ -28,22 +27,16 @@ const initApp = async () => {
         const data = await response.json();
         const { sheetData, prices } = data;
 
-        // 1. Process Prizes (normalized for UI)
         currentPrizes = { benchmarks: {} };
         sheetData.prizes.forEach(p => {
             const rank = p.rank?.toString().toLowerCase();
-            if (rank) {
-                // Normalize emoji names (first, second, third) to actual emojis if needed
+            if (rank) {                
                 let emoji = p.emoji;
-                // if (emoji === "first") emoji = "🥇";
-                // if (emoji === "second") emoji = "🥈";
-                // if (emoji === "third") emoji = "🥉";
-                
                 currentPrizes[rank] = { emoji: emoji || '💰', amount: p.amount || '$0.00' };
             }
         });
 
-        // 2. Process Benchmarks
+        // 1. Process Benchmarks
         sheetData.benchmarks.forEach(b => {
             if (b.ticker) {
                 currentPrizes.benchmarks[b.ticker.toUpperCase()] = { 
@@ -53,27 +46,16 @@ const initApp = async () => {
             }
         });
 
-        // 3. Map Records for Legacy badges (Wins in Top 3)
-        const winRecords = new Map();
-        sheetData.records.forEach(r => {
-            const rId = r.useruuid;
-            if (rId) {
-                winRecords.set(rId, (winRecords.get(rId) || 0) + 1);
-            }
-        });
-
-        // 4. Link Results & Calculate Performance
+        // 2. Link Results & Calculate Performance
         const results = sheetData.contestants.map(c => {
             const live = prices.find(p => p.ticker === (c.ticker || '').toUpperCase());
             const currentPrice = live?.price || 0;
-            const wins = winRecords.get(c.useruuid) || 0;
             const cost = parseFloat(c.cost) || 0;
             const shares = parseFloat(c.shares) || 0;
 
             return {
                 ...c,
                 name: c.name || "Anonymous",
-                // legacy: wins > 0 ? `${wins}x Champ` : null,
                 currentPrice,
                 marketValue: shares * currentPrice,
                 gainPct: cost > 0 ? ((currentPrice - cost) / cost) * 100 : 0,
@@ -82,19 +64,45 @@ const initApp = async () => {
             };
         }).sort((a, b) => b.gainPct - a.gainPct);
 
-        // 5. Render UI Components
+        // 3. Render UI Components
         renderLeaderboard(results);
         updateStats(results);
         updateBenchmarks(prices);
         updateTopMover(results);
 
-        // 6. Update Payment Button with Global Accessor
-        const payBtn = document.getElementById('payment-btn');
-        if (payBtn && sheetData.payment) {
-            payBtn.innerText = sheetData.payment.paymenttext || 'Pay Entry Fee';
-            window.paymenturl = sheetData.payment.paymenturl;
+        // 4. Update Payment Button (Using the new 'controls' object)
+        const controls = sheetData.controls;
+        console.log({ controls })
+        if (controls?.payment_url) {
+            const payBtn = document.getElementById('payment-btn');
+            payBtn.innerText = controls.payment_text || 'Pay Entry Fee';
+            window.payment_url = controls.payment_url;
         }
 
+        // 5. Handle Registration Cutoff (Using the new 'controls' object)
+        if (controls?.cutoff) {
+            const now = new Date();
+            const regCutoff = new Date(controls.cutoff);
+            const addBtn = document.getElementById('add-participant-btn');
+
+            if (now > regCutoff && addBtn) {
+                addBtn.disabled = true;
+                addBtn.innerText = "Registration Closed";
+                addBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                addBtn.onclick = null;
+            }
+        }
+
+        if (controls?.title) {
+            // Update the Browser Tab Title
+            document.title = controls.title;
+
+            // Update the Header H1
+            const mainTitleEl = document.querySelector('header h1');
+            if (mainTitleEl) {
+                mainTitleEl.innerText = controls.title;
+            }
+        }
     } catch (err) {
         console.error("Critical System Failure:", err);
     }
@@ -107,38 +115,47 @@ function renderLeaderboard(results) {
     if (!container) return;
     
     container.innerHTML = results.map((res, index) => `
-        <tr class="block md:table-row hover:bg-indigo-500/5 transition-all border-b border-indigo-500/10 md:border-none">
+        <tr class="block md:table-row hover:bg-indigo-500/10 transition-all border-b border-indigo-500/20 md:border-none">
             <td class="px-8 py-4 block md:table-cell">
                 <div class="flex items-center gap-4">
-                    <span class="text-xs font-mono text-indigo-500/50 font-bold">#${index + 1}</span>
+                    <span class="text-xs font-mono text-indigo-400 font-bold">#${index + 1}</span>
                     <div>
                         <div class="flex items-center gap-2">
                             <p class="font-black text-white text-base md:text-sm tracking-tight">${res.name}</p>
-                            ${res.legacy ? `<span class="bg-amber-500/10 text-amber-500 text-[8px] font-black px-1.5 py-0.5 rounded border border-amber-500/20 uppercase tracking-tighter">${res.legacy}</span>` : ''}
+                            ${res.legacy ? `<span class="bg-amber-500/20 text-amber-400 text-[8px] font-black px-1.5 py-0.5 rounded border border-amber-500/40 uppercase tracking-tighter">${res.legacy}</span>` : ''}
                         </div>
                         ${getPrizeBadge(index, results.length)}
                     </div>
                 </div>
             </td>
             <td class="px-8 py-3 md:py-5 block md:table-cell text-left md:text-center">
-                <span class="text-indigo-300/70 text-[10px] uppercase font-black md:hidden pt-1">Stock</span>
+                <span class="text-slate-400 text-[10px] uppercase font-black md:hidden pt-1">Stock</span>
                 <div class="flex flex-col items-end md:items-center">
-                    <span class="bg-indigo-500/10 text-indigo-300 px-2.5 py-1 rounded text-[10px] font-black tracking-widest leading-none">${res.ticker}</span>
-                    <span class="text-[9px] text-indigo-300/70 mt-2 font-bold uppercase tracking-widest truncate max-w-[100px]">${res.stockname}</span>
+                    <span class="bg-indigo-500/20 text-indigo-200 px-2.5 py-1 rounded text-[10px] font-black tracking-widest leading-none border border-indigo-500/30">${res.ticker}</span>
+                    <span class="text-[9px] text-slate-300 mt-2 font-bold uppercase tracking-widest truncate max-w-[100px]">${res.stockname}</span>
                 </div>
             </td>
-            <td class="px-8 py-3 md:py-5 block md:table-cell text-right">
-                <p class="text-xs font-bold text-indigo-200">$${(parseFloat(res.capital) || 0).toLocaleString(undefined, CURRENCY_FORMAT)}</p>
-                <p class="text-[10px] text-indigo-300/30 font-mono">${(parseFloat(res.shares) || 0).toFixed(3)} @ $${(parseFloat(res.cost) || 0).toFixed(2)}</p>
+            <td class="px-8 py-3 md:py-5 block md:table-cell text-left md:text-right">
+                <span class="text-slate-400 text-[10px] uppercase font-black md:hidden">Investment</span>
+                <div class="flex flex-col items-end">
+                    <p class="text-xs font-bold text-white">$${(parseFloat(res.capital) || 0).toLocaleString(undefined, CURRENCY_FORMAT)}</p>
+                    <p class="text-[10px] text-slate-400 font-mono">${(parseFloat(res.shares) || 0).toFixed(3)} @ $${(parseFloat(res.cost) || 0).toFixed(2)}</p>
+                </div>
             </td>
-            <td class="px-8 py-3 md:py-5 block md:table-cell text-right">
-                <p class="text-xs font-black text-white">$${(res.marketValue || 0).toLocaleString(undefined, CURRENCY_FORMAT)}</p>
-                <p class="text-[10px] text-indigo-300/30 font-mono">$${(res.currentPrice || 0).toFixed(2)}</p>
+            <td class="px-8 py-3 md:py-5 block md:table-cell text-left md:text-right">
+                <span class="text-slate-400 text-[10px] uppercase font-black md:hidden">Value</span>
+                <div class="flex flex-col items-end">
+                    <p class="text-xs font-black text-white">$${(res.marketValue || 0).toLocaleString(undefined, CURRENCY_FORMAT)}</p>
+                    <p class="text-[10px] text-slate-400 font-mono">$${(res.currentPrice || 0).toFixed(2)}</p>
+                </div>
             </td>
-            <td class="px-8 py-5 block md:table-cell text-right">
-                <p class="text-lg md:text-sm font-black ${res.gainPct >= 0 ? 'text-emerald-400' : 'text-red-400'}">
-                    ${res.gainPct >= 0 ? '+' : ''}${res.gainPct.toFixed(2)}%
-                </p>
+            <td class="px-8 py-5 block md:table-cell text-left md:text-right">
+                <span class="text-slate-400 text-[10px] uppercase font-black md:hidden">% Return</span>
+                <div class="flex flex-col items-end">
+                    <p class="text-lg md:text-sm font-black ${res.gainPct >= 0 ? 'text-emerald-400' : 'text-red-400'}">
+                        ${res.gainPct >= 0 ? '+' : ''}${res.gainPct.toFixed(2)}%
+                    </p>
+                </div>
             </td>
         </tr>
     `).join('');
@@ -216,13 +233,9 @@ function getPrizeBadge(index, totalCount) {
     return '';
 }
 
-function updateDynamicYear() {
-    document.querySelectorAll('.current-year').forEach(el => el.innerText = new Date().getFullYear());
-}
-
 // Global Event Listeners
 window.triggerPayment = () => {
-    if (window.paymenturl) window.location.href = window.paymenturl;
+    if (window.payment_url) window.location.href = window.payment_url;
 };
 
 window.openEntryForm = () => {

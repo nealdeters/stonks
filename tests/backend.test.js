@@ -1,13 +1,13 @@
 const { test, describe, before } = require('node:test');
 const assert = require('node:assert');
 const axios = require('axios');
-const { handler } = require('../netlify/functions/get-prices.js');
+const { handler } = require('../netlify/functions/fetch-data.js');
 
 // Principal Note: We must mock these so the JWT and Sheets calls don't crash
 const googleSheets = require('@googleapis/sheets');
 const { JWT } = require('google-auth-library');
 
-describe('Backend Function: get-prices', () => {
+describe('Backend Function: fetch-data', () => {
     
     before(() => {
         process.env.SHEET_ID = 'TEST_SHEET_ID';

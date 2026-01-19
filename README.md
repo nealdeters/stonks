@@ -20,7 +20,7 @@ A high-performance, mobile-responsive leaderboard for an annual stock-picking co
 /
 ├── netlify/
 │   └── functions/
-│       └── get-prices.js    # Backend API proxy & secure ENV bridge
+│       └── fetch-data.js    # Backend API proxy & secure ENV bridge
 ├── src/
 │   ├── data/
 │   │   ├── participants.json # Local Fallback: List of players/picks
