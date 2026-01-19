@@ -1,7 +1,8 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
-const { isContestOver } = require('../../src/utils/helpers');
+const axios = require('axios');
+const { isContestOver } = require('./utils/helpers');
 
 async function checkIfContestOver() {
     try {
@@ -23,6 +24,8 @@ async function checkIfContestOver() {
         const over = await checkIfContestOver();
         if (over) {
             console.log("Contest has ended. Skipping screenshot. Use --force to override.");
+            if (process.env.NODE_ENV !== 'test') process.exit(0);
+            return; 
             process.exit(0);
         }
     } else {
