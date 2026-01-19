@@ -21,6 +21,7 @@ exports.handler = async () => {
         getRange(SHEETS.USERS),
         getRange(SHEETS.PRIZES),
         getRange(SHEETS.RECORDS),
+        getRange(SHEETS.WINNERS),
     ];
 
     try {
@@ -37,6 +38,7 @@ exports.handler = async () => {
             users: parseRows(response.data.valueRanges[3]),
             prizes: parseRows(response.data.valueRanges[4]),
             records: parseRows(response.data.valueRanges[5]),
+            winners: parseRows(response.data.valueRanges[6]),
         };
 
         const tickers = [...new Set([...sheetData.contestants.map(c => c.ticker), ...sheetData.benchmarks.map(b => b.ticker)])].filter(Boolean);

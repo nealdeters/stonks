@@ -25,6 +25,7 @@ const SHEETS = {
     BENCHMARKS: 'Benchmarks',
     PRIZES: 'Prizes',
     RECORDS: 'Records',
+    WINNERS: 'Winners',
 };
 
 function getRange(sheetName, columns = 'A:Z') { return `${sheetName}!${columns}` };

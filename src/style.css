@@ -1,5 +1,3 @@
-/* src/style.css */
-
 /* Custom scrollbar - Midnight Aurora Style */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: #020617; }
@@ -7,9 +5,19 @@
 
 html, body {
     scroll-behavior: smooth;
-    /* Essential: sticky fails if any parent has overflow: hidden or auto */
     overflow-x: visible; 
     background-color: #020617; 
+    /* Sticky Footer Logic: Flexbox */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    margin: 0;
+}
+
+/* Allow main content to take full width and push footer down */
+main {
+    flex: 1 0 auto;
+    width: 100%;
 }
 
 /* PRIMARY STICKY: Logo and Market Status */
@@ -21,7 +29,6 @@ html, body {
     backdrop-filter: blur(12px);
     border-bottom: 1px solid rgba(99, 102, 241, 0.1); 
     width: 100%;
-    /* Ensure height is determined by content to prevent overlap */
     height: auto;
     min-height: 112px;
     display: flex;
@@ -32,7 +39,7 @@ html, body {
 @media (min-width: 768px) {
     #leaderboard-table thead th {
         position: sticky;
-        top: 111px; /* 1px overlap to prevent rendering slivers */
+        top: 111px; 
         z-index: 50;
         background-color: #020617; 
         padding-top: 1.5rem;
@@ -40,9 +47,17 @@ html, body {
         box-shadow: 0 1px 0 rgba(99, 102, 241, 0.2);
     }
 
-    /* Rounding for the leaderboard card */
     #leaderboard-table thead th:first-child { border-top-left-radius: 2.5rem; }
     #leaderboard-table thead th:last-child { border-top-right-radius: 2.5rem; }
+}
+
+/* Sticky Footer Base Styling */
+.sticky-footer {
+    flex-shrink: 0;
+    width: 100%;
+    background-color: rgba(2, 6, 23, 0.8);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid rgba(99, 102, 241, 0.1);
 }
 
 /* THE CONTAINER: Fixed rounding-to-square transition */
