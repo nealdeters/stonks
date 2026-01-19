@@ -37,7 +37,8 @@ main {
 
 /* SECONDARY STICKY: Table Headers */
 @media (min-width: 768px) {
-    #leaderboard-table thead th {
+    #leaderboard-table thead th,
+    #performers-table thead th {
         position: sticky;
         top: 111px; 
         z-index: 50;
@@ -47,8 +48,10 @@ main {
         box-shadow: 0 1px 0 rgba(99, 102, 241, 0.2);
     }
 
-    #leaderboard-table thead th:first-child { border-top-left-radius: 2.5rem; }
-    #leaderboard-table thead th:last-child { border-top-right-radius: 2.5rem; }
+    #leaderboard-table thead th:first-child,
+    #performers-table thead th:first-child { border-top-left-radius: 2.5rem; }
+    #leaderboard-table thead th:last-child,
+    #performers-table thead th:last-child { border-top-right-radius: 2.5rem; }
 }
 
 /* Sticky Footer Base Styling */
@@ -62,7 +65,7 @@ main {
 
 /* THE CONTAINER: Fixed rounding-to-square transition */
 .leaderboard-card-container {
-    overflow: clip; 
+    overflow: visible; 
     border-radius: 2.5rem;
 }
 
