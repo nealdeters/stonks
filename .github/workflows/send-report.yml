@@ -1,36 +1,45 @@
-name: Weekly Report
+name: Send Weekly Report
 on:
   schedule:
-    - cron: '0 22 * * 5' # Friday at 5:00 PM ET (21:00 UTC)
+    - cron: '0 14 * * 1' # Mondays at 9am EST
   workflow_dispatch:
     inputs:
       force:
-        description: 'Force send report even if contest is over'
+        description: 'Force send (ignore contest end)'
         required: false
         type: boolean
         default: false
+      recipients:
+        description: 'Manual recipients (comma-separated list)'
+        required: false
+        type: string
 
 jobs:
   report:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-          
-      - run: npm install
 
-      - name: Send Report
-        run: |
-          FLAGS=""
-          if [ "${{ github.event.inputs.force }}" == "true" ]; then
-            FLAGS="--force"
-          fi
-          node scripts/send-report.js $FLAGS
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run Report
         env:
           SHEET_ID: ${{ secrets.SHEET_ID }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}
           GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
+        run: |
+          # Build flags based on manual inputs
+          FLAGS=""
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then FLAGS="--force"; fi
+          if [ -n "${{ github.event.inputs.recipients }}" ]; then FLAGS="$FLAGS --to=${{ github.event.inputs.recipients }}"; fi
+          
+          # Use your exact script path
+          node scripts/send-report.js $FLAGS
