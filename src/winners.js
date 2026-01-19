@@ -1,6 +1,8 @@
 const initWinners = async () => {
+    const { color: themeColor } = applyGlobalTheme();
+
     try {
-        const response = await fetch(`/.netlify/functions/fetch-data?cb=${Date.now()}`);
+        const response = await fetch(`/.netlify/functions/fetch-data`);
         const data = await response.json();
         
         // Accessing the winners array
@@ -9,9 +11,7 @@ const initWinners = async () => {
 
         // Update Header & Title
         if (controls?.title) {
-            const titleEl = document.querySelector('header h1');
-            if (titleEl) titleEl.innerText = controls.title;
-            document.title = `${controls.title} - Hall of Fame`;
+            updateSiteTitle(controls.title);
         }
 
         const container = document.getElementById('winners-body');
@@ -29,16 +29,16 @@ const initWinners = async () => {
             const year = winnerRow.year || "N/A";
             
             return `
-            <div class="p-8 border-b border-indigo-500/10 last:border-0 hover:bg-indigo-500/5 transition-all">
+            <div class="p-8 border-b border-${themeColor}-500/10 last:border-0 hover:bg-${themeColor}-500/5 transition-all">
                 <div class="flex flex-col md:flex-row md:items-center gap-8">
                     <div class="shrink-0">
                         <span class="text-5xl font-black text-white italic tracking-tighter opacity-80">${year}</span>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
-                        ${renderWinnerSlot(winnerRow.first_user_name, winnerRow.first_user_uuid, '1st', 'amber-400', '🥇')}
-                        ${renderWinnerSlot(winnerRow.second_user_name, winnerRow.second_user_uuid, '2nd', 'slate-300', '🥈')}
-                        ${renderWinnerSlot(winnerRow.third_user_name, winnerRow.third_user_uuid, '3rd', 'orange-400', '🥉')}
+                        ${renderWinnerSlot(winnerRow.first_user_name, winnerRow.first_user_uuid, '1st', 'amber-400', '🥇', themeColor)}
+                        ${renderWinnerSlot(winnerRow.second_user_name, winnerRow.second_user_uuid, '2nd', 'slate-300', '🥈', themeColor)}
+                        ${renderWinnerSlot(winnerRow.third_user_name, winnerRow.third_user_uuid, '3rd', 'orange-400', '🥉', themeColor)}
                     </div>
                 </div>
             </div>`;
@@ -53,13 +53,13 @@ const initWinners = async () => {
     }
 };
 
-function renderWinnerSlot(name, uuid, rank, color, emoji) {
+function renderWinnerSlot(name, uuid, rank, color, emoji, themeColor = 'indigo') {
     if (!name || name.trim() === "") {
-        return `<div class="hidden md:block bg-indigo-500/5 rounded-2xl border border-indigo-500/5 h-16"></div>`;
+        return `<div class="hidden md:block bg-${themeColor}-500/5 rounded-2xl border border-${themeColor}-500/5 h-16"></div>`;
     }
 
     return `
-    <a href="/stats?uuid=${uuid}" class="flex items-center gap-4 p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/20 hover:border-${color}/50 transition-all group shadow-lg">
+    <a href="/stats?uuid=${uuid}" class="flex items-center gap-4 p-4 rounded-2xl bg-${themeColor}-950/40 border border-${themeColor}-500/20 hover:border-${color}/50 transition-all group shadow-lg">
         <div class="text-2xl">${emoji}</div>
         <div class="overflow-hidden">
             <p class="text-[9px] font-black uppercase tracking-widest text-${color}">${rank} Place</p>
@@ -69,3 +69,9 @@ function renderWinnerSlot(name, uuid, rank, color, emoji) {
 }
 
 document.addEventListener('DOMContentLoaded', initWinners);
+
+// Tailwind Safelist for Winners
+const _safelist = `
+    border-emerald-500/10 hover:bg-emerald-500/5 bg-emerald-500/5 
+    border-emerald-500/5 bg-emerald-950/40 border-emerald-500/20
+`;

@@ -5,18 +5,20 @@
 const UPDATE_INTERVAL = 5 * 60 * 1000;
 const CURRENCY_FORMAT = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
 
+const { color: themeColor, icon: themeIcon } = applyGlobalTheme();
+
 let currentPrizes = {};
 
 const PRIZE_STYLES = {
     0: "bg-amber-500/20 text-amber-500 border-amber-500/50",
-    1: "bg-indigo-300/20 text-indigo-300 border-indigo-300/50",
+    1: `bg-${themeColor}-300/20 text-${themeColor}-300 border-${themeColor}-300/50`,
     2: "bg-orange-600/20 text-orange-400 border-orange-600/50",
     "last": "bg-red-500/20 text-red-400 border-red-500/50"
 };
 
 const initApp = async () => {
     try {
-        const response = await fetch(`/.netlify/functions/fetch-data?cb=${Date.now()}`);
+        const response = await fetch(`/.netlify/functions/fetch-data`);
         if (!response.ok) {
             const errData = await response.json();
             throw new Error(errData.message || "Network response was not ok");
@@ -27,6 +29,11 @@ const initApp = async () => {
         
         // Update global market status
         updateMarketStatus({ isMarketOpen, holidayName });
+
+        // 0. Update Title immediately
+        if (sheetData.controls?.title) {
+            updateSiteTitle(sheetData.controls.title);
+        }
 
         // 1. Process Prizes
         currentPrizes = { benchmarks: {} };
@@ -103,12 +110,6 @@ const initApp = async () => {
                     addBtn.onclick = null;
                 }
             }
-
-            if (controls.title) {
-                document.title = controls.title;
-                const mainTitleEl = document.querySelector('header h1');
-                if (mainTitleEl) mainTitleEl.innerText = controls.title;
-            }
         }
 
     } catch (err) {
@@ -121,15 +122,15 @@ const initApp = async () => {
 function renderEmptyState() {
     const container = document.getElementById('dashboard-content');
     container.innerHTML = `
-        <div class="bg-indigo-950/20 border border-indigo-500/20 rounded-[40px] p-12 text-center my-8">
-            <div class="text-6xl mb-6">🏁</div>
+        <div class="bg-${themeColor}-950/20 border border-${themeColor}-500/20 rounded-[40px] p-12 text-center my-8">
+            <div class="text-6xl mb-6">${themeIcon}</div>
             <h2 class="text-2xl font-black text-white uppercase tracking-tight mb-3">Season Intermission</h2>
-            <p class="text-indigo-300/70 max-w-md mx-auto mb-8 font-medium">
+            <p class="text-${themeColor}-300/70 max-w-md mx-auto mb-8 font-medium">
                 The previous contest has concluded and the board has been cleared. 
                 Check the Hall of Fame for past winners while we prepare for the next round!
             </p>
             <div class="flex justify-center gap-4">
-                <button onclick="openEntryForm()" class="bg-gradient-to-r from-violet-500 to-indigo-500 px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all">
+                <button onclick="openEntryForm()" class="bg-gradient-to-r from-violet-500 to-${themeColor}-500 px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all">
                     Be the first to join
                 </button>
             </div>
@@ -145,15 +146,15 @@ function renderLeaderboard(results, sheetData) {
     
     container.innerHTML = results.map((res, index) => {
         return `
-        <tr class="block md:table-row hover:bg-indigo-500/10 transition-all border-b border-indigo-500/20 md:border-none">
+        <tr class="block md:table-row hover:bg-${themeColor}-500/10 transition-all border-b border-${themeColor}-500/20 md:border-none">
             <td class="px-8 py-4 block md:table-cell">
                 <div class="flex items-center gap-4">
-                    <span class="text-xs font-mono text-indigo-400 font-bold w-6">#${index + 1}</span>
+                    <span class="text-xs font-mono text-${themeColor}-400 font-bold w-6">#${index + 1}</span>
                     <div class="flex flex-col gap-1.5">
                         <div class="flex items-center gap-2">
                             <a href="/stats?uuid=${res.user_uuid}" class="text-white font-black hover:text-cyan-400 transition-all cursor-pointer group flex items-center gap-2">
                                 <span class="text-base md:text-sm tracking-tight">${res.name}</span>
-                                <span class="text-[8px] opacity-0 group-hover:opacity-100 transform translate-x-[-4px] group-hover:translate-x-0 transition-all bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30 text-indigo-300 whitespace-nowrap">
+                                <span class="text-[8px] opacity-0 group-hover:opacity-100 transform translate-x-[-4px] group-hover:translate-x-0 transition-all bg-${themeColor}-500/20 px-2 py-0.5 rounded border border-${themeColor}-500/30 text-${themeColor}-300 whitespace-nowrap">
                                     VIEW CAREER
                                 </span>
                             </a>
@@ -167,8 +168,8 @@ function renderLeaderboard(results, sheetData) {
             <td class="px-8 py-3 md:py-5 block md:table-cell text-left md:text-center">
                 <span class="text-slate-400 text-[10px] uppercase font-black md:hidden pt-1">Stock</span>
                 <div class="flex flex-col items-end md:items-center">
-                    <span class="bg-indigo-500/20 text-indigo-200 px-2.5 py-1 rounded text-[10px] font-black tracking-widest border border-indigo-500/30">${res.ticker}</span>
-                    <span class="text-[9px] text-slate-300 mt-2 font-bold uppercase tracking-widest truncate max-w-[100px]">${res.stockname}</span>
+                    <span class="bg-${themeColor}-500/20 text-${themeColor}-200 px-2.5 py-1 rounded text-[10px] font-black tracking-widest border border-${themeColor}-500/30">${res.ticker}</span>
+                    <span class="text-[9px] text-slate-300 mt-2 font-bold uppercase tracking-widest">${res.stockname}</span>
                 </div>
             </td>
             <td class="px-8 py-3 md:py-5 block md:table-cell text-left md:text-right">
@@ -210,10 +211,10 @@ function updateBenchmarks(livePrices) {
             const pct = ((live.price - start) / start) * 100;
             const isPos = pct >= 0;
             return `
-                <div class="bg-indigo-500/5 border border-indigo-500/10 p-4 rounded-3xl flex items-center gap-4 flex-1 min-w-[140px]">
+                <div class="bg-${themeColor}-500/5 border border-${themeColor}-500/10 p-4 rounded-3xl flex items-center gap-4 flex-1 min-w-[140px]">
                     <div class="${isPos ? 'bg-emerald-500/20' : 'bg-red-500/20'} p-2.5 rounded-xl text-xs font-black">${ticker}</div>
                     <div>
-                        <p class="text-[9px] text-indigo-300/70 uppercase font-black tracking-widest">${config[ticker].name}</p>
+                        <p class="text-[9px] text-${themeColor}-300/70 uppercase font-black tracking-widest">${config[ticker].name}</p>
                         <p class="text-sm font-bold ${isPos ? 'text-emerald-400' : 'text-red-400'}">${isPos ? '+' : ''}${pct.toFixed(2)}%</p>
                     </div>
                 </div>`;
@@ -286,3 +287,11 @@ window.openEntryForm = () => {
 
 document.addEventListener('DOMContentLoaded', initApp);
 setInterval(initApp, UPDATE_INTERVAL);
+
+// Force Tailwind to generate these classes by mentioning them in a string
+const _safelist = `
+    bg-emerald-300/20 text-emerald-300 border-emerald-300/50 bg-emerald-950/20 
+    border-emerald-500/20 text-emerald-300/70 to-emerald-500 hover:bg-emerald-500/10 
+    border-emerald-500/20 text-emerald-400 bg-emerald-500/20 border-emerald-500/30 
+    text-emerald-200 bg-emerald-500/5 border-emerald-500/10
+`;

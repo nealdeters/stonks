@@ -58,7 +58,8 @@ exports.handler = async () => {
         return {
             isMarketOpen: isOpen,
             holidayName: holiday,
-            prices
+            prices,
+            allSymbols
         };
     };
 
@@ -90,7 +91,20 @@ exports.handler = async () => {
         //     symbolListRequest,
         //     ...priceRequests
         // ]);
-        const { isMarketOpen, prices } = await fetchAllData(tickers);
+        const { isMarketOpen, prices, allSymbols } = await fetchAllData(tickers);
+
+        // Generate Name Map for all historical and active tickers
+        const historicalTickers = sheetData.records.map(r => r.ticker);
+        const uniqueTickers = [...new Set([...tickers, ...historicalTickers])].filter(Boolean);
+        
+        const stockNames = {};
+        if (allSymbols) {
+            uniqueTickers.forEach(t => {
+                const upperT = t.toUpperCase();
+                const match = allSymbols.find(s => s.symbol === upperT);
+                if (match) stockNames[upperT] = match.description;
+            });
+        }
 
         // const symbolMap = new Map(
         //     Array.isArray(symbolListResult.data) ? symbolListResult.data.map(item => [item.symbol, item.description]) : []
@@ -106,7 +120,11 @@ exports.handler = async () => {
         //     };
         // });
 
-        return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ sheetData, prices, isMarketOpen }) };
+        return { 
+            statusCode: 200, 
+            headers: { ...HEADERS, "Cache-Control": "public, max-age=300, s-maxage=300" }, 
+            body: JSON.stringify({ sheetData, prices, isMarketOpen, stockNames }) 
+        };
     } catch (err) {
         return { statusCode: 500, headers: HEADERS, body: JSON.stringify({ error: err.message }) };
     }

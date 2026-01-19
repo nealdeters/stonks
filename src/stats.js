@@ -1,4 +1,6 @@
 const initStats = async () => {
+    const { color: themeColor } = applyGlobalTheme();
+
     try {
         const urlParams = new URLSearchParams(window.location.search);
         const targetUuid = urlParams.get('uuid');
@@ -8,11 +10,18 @@ const initStats = async () => {
             return;
         }
 
-        const response = await fetch(`/.netlify/functions/fetch-data?cb=${Date.now()}`);
+        const response = await fetch(`/.netlify/functions/fetch-data`);
         const data = await response.json();
         
         // Use the same mapping logic as Winners (Object-based)
         const records = data.sheetData?.records || data.records;
+        const controls = data.sheetData?.controls || data.controls;
+        const prices = data.prices || [];
+        const stockNames = data.stockNames || {};
+
+        if (controls?.title) {
+            updateSiteTitle(controls.title);
+        }
 
         if (!records || records.length === 0) {
             document.getElementById('stats-body').innerHTML = `<tr><td colspan="4" class="p-20 text-center text-slate-500">No career records found.</td></tr>`;
@@ -55,13 +64,15 @@ const initStats = async () => {
             const isWin = parseInt(row.place) === 1;
             const placeEmoji = isWin ? '🥇' : parseInt(row.place) === 2 ? '🥈' : parseInt(row.place) === 3 ? '🥉' : '';
             const gain = parseFloat(row.percent_gain) || 0;
+            const tickerUpper = (row.ticker || '').toUpperCase();
+            const stockName = row.stockname || stockNames[tickerUpper] || prices.find(p => p.ticker === tickerUpper)?.name || 'Stock';
 
             return `
-                <tr class="hover:bg-indigo-500/5 transition-all">
-                    <td class="px-8 py-6 font-mono font-bold text-indigo-400">${row.year}</td>
+                <tr class="hover:bg-${themeColor}-500/5 transition-all">
+                    <td class="px-8 py-6 font-mono font-bold text-${themeColor}-400">${row.year}</td>
                     <td class="px-8 py-6">
                         <span class="text-white font-black">${row.ticker}</span>
-                        <p class="text-[9px] text-slate-500 uppercase tracking-widest mt-1">${row.capital} Investment</p>
+                        <p class="text-[9px] text-slate-500 uppercase tracking-widest mt-1">${stockName}</p>
                     </td>
                     <td class="px-8 py-6 text-center">
                         <span class="${isWin ? 'text-amber-400 font-black' : 'text-slate-400'}">
@@ -94,3 +105,6 @@ if (typeof window !== 'undefined' && !isTest) {
 if (typeof module !== 'undefined') {
     module.exports = { initStats };
 }
+
+// Tailwind Safelist for Stats
+const _safelist = "hover:bg-emerald-500/5 text-emerald-400";
