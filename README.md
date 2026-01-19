@@ -1,16 +1,17 @@
-# 📈 Stonks
+# 📈 Stonks 2026
 
-A high-performance, mobile-responsive leaderboard for an annual stock-picking contest. This application uses a serverless architecture to provide real-time performance tracking while remaining strictly within free-tier API limits.
+A high-performance, mobile-responsive leaderboard and automated management system for an annual stock-picking contest. This application uses a serverless architecture to provide real-time performance tracking and automated end-of-contest transitions.
 
 ---
 
-## 🚀 Features
+## 🚀 Key Features
 
-- **Dual-Source Data Engine:** Toggle between **Google Sheets** for live, no-code updates and **Local JSON** for versioned stability.
-- **Real-Time Leaderboard:** Dynamic calculation of gains, losses, and rankings.
-- **Integrated Prize Badges:** Winners (1st, 2nd, 3rd) and the "Last Place" consolation prize are highlighted directly on the leaderboard.
-- **Server-Side Caching:** Optimized to share a single API fetch across all family members every 5 minutes.
-- **Secure Configuration:** Sensitive data like Google Sheet IDs and API keys are stored in encrypted environment variables.
+* **Automated Season Reset:** A GitHub Actions-driven finalization engine that snapshots final standings, archives them to a "Records" hall of fame, and resets the board for the next contest.
+* **Dual-Source Data Engine:** Seamless integration with Google Sheets for live, no-code updates, with calculated fallbacks for offline stability.
+* **Smart Ranking & Prize Logic:** Dynamic calculation of gains, losses, and rankings using real-time Finnhub price data. Includes automated badge assignment for 1st, 2nd, 3rd, and the "Last Place" consolation.
+* **Career Analytics:** Deep-link participant profiles that aggregate historical performance data from the Records tab to calculate career "Medal Counts" and average returns.
+* **Server-Side Caching:** Netlify Functions optimize API usage by sharing a single 5-minute price cache across all concurrent users.
+* **PWA Ready:** Installable on iOS/Android with custom icons and manifest support for a native-app feel.
 
 ---
 
@@ -18,78 +19,62 @@ A high-performance, mobile-responsive leaderboard for an annual stock-picking co
 
 ```text
 /
+├── .github/
+│   └── workflows/
+│       ├── finalize.yml     # Weekly check to archive & reset contest
+│       └── main.yml         # CI/CD & Automated test suite
 ├── netlify/
 │   └── functions/
-│       └── fetch-data.js    # Backend API proxy & secure ENV bridge
+│       └── fetch-data.js    # Secure API proxy & Finnhub cache
+├── scripts/
+│   └── finalize.js          # Season reset & archiving logic
 ├── src/
-│   ├── data/
-│   │   ├── participants.json # Local Fallback: List of players/picks
-│   │   └── prizes.json       # Local Fallback: Payouts & Benchmarks
-│   └── app.js                # Core Engine: Dual-adapter data fetching
+│   ├── utils/
+│   │   └── helpers.js       # Shared date, parsing, and range logic
+│   └── app.js               # Frontend orchestration & UI rendering
 ├── tests/
-│   ├── backend.test.js       # Unit tests for Netlify functions
-│   └── ui.test.js            # End-to-end UI tests with Puppeteer
-├── index.html               # Semantic UI skeleton
-├── style.css                # Custom styling
-├── manifest.json            # PWA configuration
-├── netlify.toml             # Deployment configuration
-└── .env                     # Local secrets (SHEET_ID, FINNHUB_KEY)
+│   ├── helpers/
+│   │   └── browser.js       # Centralized Puppeteer CI/CD config
+│   ├── finalize.test.js     # Unit tests for reset logic
+│   └── stats.ui.test.js     # Career stats rendering tests
+├── index.html               # Main Dashboard (PWA entry)
+├── manifest.json            # Web App Manifest
+└── .env                     # Local secrets (SHEET_ID, FINNHUB_KEY, GOOGLE_KEY)
 ```
 
 ---
 
-## 👥 Data Management Options
+## 📊 The "Finalization" Workflow
 
-The application supports two modes, controlled by the DATA_SOURCE constant in src/app.js.
+The app is designed to be "Set it and Forget it." Every Monday morning, a GitHub Action runs \`scripts/finalize.js\`:
 
-### Option A: Google Sheets (Recommended for Live Contest)
-Manage the entire contest without touching code. The app pulls from a Google Sheet acting as a live database.
-
-1. Setup: Create a Google Sheet with three tabs: Participants, Prizes, and Benchmarks.
-2. Permissions: Set the sheet to "Anyone with the link can view." (Note: Do NOT use "Publish to Web").
-3. Connection: Add your SHEET_ID (the long string in the sheet's edit URL) to Netlify's environment variables.
-4. Logic: The app uses the Google Visualization API (/gviz/tq) to fetch and parse data into the UI.
-
-### Option B: Local JSON (Rollback/Archive Mode)
-If Google Sheets is unavailable or you wish to "lock" a season's results, set DATA_SOURCE = 'LOCAL' in app.js.
-
-- Participants (src/data/participants.json): Define name, ticker, capital, cost, and shares.
-- Prizes (src/data/prizes.json): Define the emoji rewards and the startPrice for market benchmarks (SPY/QQQ).
-
----
-
-## 📊 Prize & Benchmark Logic
-
-Whether using Sheets or JSON, the logic follows these rules:
-
-- Numeric Ranks ("1", "2", "3"): Automatically assigned to the top finishers based on total return %.
-- Consolation ("last"): A special key assigned to the person at the very bottom of the leaderboard.
-- Benchmarks: Compares family performance against market indices (SPY/QQQ).
-  - startPrice: Set this to the market price at the exact moment the contest starts to ensure accurate % gain tracking.
+1.  **Date Check:** It compares today's date against the \`end\` date in your Google Sheets 'Controls' tab.
+2.  **Archival:** If the contest is over, it fetches final prices, calculates the definitive 'Place' for every player, and appends the 10-column result to the 'Records' tab.
+3.  **Reset:** It clears the 'Contestants' tab (preserving headers) to prepare for next year’s entries.
+4.  **Automation:** The 'Winners' page automatically updates its podium based on the new data in 'Records'.
 
 ---
 
 ## 🛠️ Technical Architecture
 
-### The Secure Bridge
-Since browsers cannot access process.env, the Netlify Function acts as a secure bridge. It retrieves the SHEET_ID from the server environment and passes it to the frontend alongside the price data, keeping your spreadsheet ID out of the public GitHub repository.
+### Secure Environment Bridge
+Since browser-side API calls expose keys, the Netlify Function acts as the gatekeeper. It retrieves \`GOOGLE_PRIVATE_KEY\` and \`FINNHUB_KEY\` from the server environment, keeping your credentials hidden from the public.
 
-[Image of a sequence diagram showing a browser requesting data from a serverless function, which retrieves an environment variable and returns it to the client]
-
-### Zero-Latency Batching
-Benchmark tickers (SPY/QQQ) are batched with participant tickers in a single request to the Finnhub API. This provides market context with zero additional API overhead or loading delay.
-
-### API Rate Limit Protection (Finnhub)
-- Server-Side Cache: Stock prices are stored in global memory for 5 minutes.
-- Client Polling: app.js refreshes every 5 minutes.
-- Efficiency: This architecture uses only ~5% of the monthly free-tier allowance, regardless of how many family members are viewing the site.
+### Zero-Sandbox CI Testing
+To ensure stability on Ubuntu-based GitHub Runners, the test suite utilizes a centralized Puppeteer helper configured with \`--no-sandbox\` and \`--disable-setuid-sandbox\` flags, ensuring UI tests pass in restricted cloud environments.
 
 ---
 
 ## 🌍 Deployment & Local Dev
 
-1. Environment Variables:
-   - FINNHUB_KEY: Your API key from Finnhub.io.
-   - SHEET_ID: The unique ID of your Google Sheet.
-2. Local Development: Run "netlify dev" to sync your local environment with your cloud variables and test the Google Sheet integration locally.
-3. Production: Any push to the main branch triggers an automatic build and deployment.
+### 1. Environment Variables
+* **FINNHUB_KEY:** API key for market data.
+* **SHEET_ID:** The ID from your Google Sheet URL.
+* **GOOGLE_SERVICE_ACCOUNT_EMAIL:** The email of your GCP Service Account.
+* **GOOGLE_PRIVATE_KEY:** The RSA private key for Sheets API access.
+
+### 2. Local Development
+Run \`netlify dev\` to test the full stack, including functions and environment variables.
+
+### 3. Testing
+Run \`node --test tests/\` to execute the full suite of unit and UI integration tests.
