@@ -117,7 +117,7 @@ const handler = async (event) => {
 
     } catch (err) {
         console.error("Sync Error:", err);
-        return { statusCode: 500 };
+        return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
     }
 };
 
