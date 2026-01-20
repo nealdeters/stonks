@@ -52,7 +52,9 @@ const initStats = async () => {
         }
 
         // Filter records for this specific UUID
-        const userHistory = records.filter(row => row.user_uuid === targetUuid);
+        const userHistory = records
+            .filter(row => row.user_uuid === targetUuid)
+            .sort((a, b) => parseInt(b.year) - parseInt(a.year));
 
         if (userHistory.length === 0) {
             document.getElementById('stats-body').innerHTML = `
