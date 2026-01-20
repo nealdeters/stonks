@@ -42,7 +42,6 @@ const initPerformers = async () => {
             return;
         }
 
-        // Aggregate Data by User
         const stats = {};
         records.forEach(row => {
             const uuid = row.user_uuid;
@@ -67,13 +66,11 @@ const initPerformers = async () => {
             else if (place === 3) stats[uuid].bronze++;
         });
 
-        // Calculate Average Return and Sort Descending
         const leaderboard = Object.values(stats).map(s => ({
             ...s,
             avgReturn: s.totalReturn / s.seasons
         })).sort((a, b) => b.avgReturn - a.avgReturn);
 
-        // Render Table
         container.innerHTML = leaderboard.map((row, index) => {
             const avg = row.avgReturn.toFixed(2);
             const isPos = row.avgReturn >= 0;
@@ -145,7 +142,6 @@ if (typeof module !== 'undefined') {
     module.exports = { initPerformers };
 }
 
-// Tailwind Safelist for Performers
 const _safelist = `
     hover:bg-emerald-500/5 border-emerald-500/10 text-emerald-400 hover:text-emerald-400
     hover:bg-orange-500/5 border-orange-500/10 text-orange-400 hover:text-orange-400

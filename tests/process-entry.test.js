@@ -13,7 +13,6 @@ describe('Registration Logic: process-entry', () => {
         process.env.GOOGLE_PRIVATE_KEY = 'test-key';
     });
 
-    // Helper to create the standard batchGet mock response
     const mockBatchResponse = (userRows = [], contestantRows = [], controlRows = []) => ({
         data: {
             valueRanges: [
@@ -59,8 +58,8 @@ describe('Registration Logic: process-entry', () => {
             spreadsheets: {
                 values: {
                     batchGet: async () => mockBatchResponse(
-                        [['U1', 'Neal', 'neal@test.com']], // User exists
-                        [['U1', 'neal@test.com', 'TSLA']]  // Contestant exists with same UUID
+                        [['U1', 'Neal', 'neal@test.com']],
+                        [['U1', 'neal@test.com', 'TSLA']]
                     )
                 }
             }

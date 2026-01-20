@@ -26,7 +26,6 @@ async function checkIfContestOver() {
             console.log("Contest has ended. Skipping screenshot. Use --force to override.");
             if (process.env.NODE_ENV !== 'test') process.exit(0);
             return; 
-            process.exit(0);
         }
     } else {
         console.log("Force flag detected. Ignoring contest end check.");

@@ -92,7 +92,7 @@ async function run() {
         if (require.main === module) {
             process.exit(1);
         } else {
-            throw err; // Re-throw so the test runner sees the actual error
+            throw err;
         }
     }
 }
@@ -100,4 +100,4 @@ async function run() {
 if (require.main === module) {
     run();
 }
-module.exports = { run }; // Export for testing
+module.exports = { run };

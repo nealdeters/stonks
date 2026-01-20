@@ -16,18 +16,15 @@ describe('Contest Reminder Script', () => {
 
     beforeEach(() => {
         process.argv = ['node', 'scripts/send-reminder.js'];
-        // Clear cache so the script picks up new mocks
         delete require.cache[require.resolve('../scripts/send-reminder.js')];
     });
 
     test('Filters out already registered users and sends to pending only', async (t) => {
-        // 1. Mock JWT
         const originalJWT = googleAuth.JWT;
         googleAuth.JWT = function() {
             return { authorize: async () => ({}) };
         };
 
-        // 2. Mock Google Sheets batchGet
         t.mock.method(googleSheets, 'sheets', () => ({
             spreadsheets: {
                 values: {

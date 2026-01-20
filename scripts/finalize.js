@@ -23,7 +23,6 @@ async function run(injectedSheets = null) {
     }
 
     try {
-        // 1. Check Date
         const controlsRes = await sheets.spreadsheets.values.get({
             spreadsheetId: sheetId,
             range: getRange(SHEETS.CONTROLS)
@@ -36,7 +35,6 @@ async function run(injectedSheets = null) {
             return;
         }
 
-        // 2. Fetch Contestants
         const contestantsRes = await sheets.spreadsheets.values.get({
             spreadsheetId: sheetId,
             range: getRange(SHEETS.CONTESTANTS)
@@ -57,21 +55,17 @@ async function run(injectedSheets = null) {
             };
         });
 
-        // 3. Fetch Final Prices & Calculate Gains
         console.log("Fetching final market prices...");
         const finalResults = await Promise.all(rawData.map(async (p) => {
-            // Note: In real use, this hits Finnhub. In test, it hits our mock.
             const priceRes = await axios.get(`https://finnhub.io/api/v1/quote?symbol=${p.ticker}&token=${API_KEY}`);
             const finalPrice = priceRes.data.c;
             
-            // Calculation
             const currentMarketValue = finalPrice * p.shares;
             const gainPercentage = ((currentMarketValue - p.capital) / p.capital) * 100;
             
             return { ...p, finalPrice, gainPercentage };
         }));
 
-        // Sort by gain descending
         const sorted = finalResults.sort((a, b) => b.gainPercentage - a.gainPercentage);
 
         const archiveRows = sorted.map((p, index) => [
@@ -83,11 +77,10 @@ async function run(injectedSheets = null) {
             p.shares,
             p.finalPrice,
             `${p.gainPercentage.toFixed(2)}%`,
-            index + 1, // Place
+            index + 1,
             new Date().getFullYear().toString()
         ]);
 
-        // 5. Append to Records
         await sheets.spreadsheets.values.append({
             spreadsheetId: sheetId,
             range: `${SHEETS.RECORDS}!A1`,
@@ -95,7 +88,6 @@ async function run(injectedSheets = null) {
             resource: { values: archiveRows }
         });
 
-        // 6. Clear Contestants
         await sheets.spreadsheets.values.clear({
             spreadsheetId: sheetId,
             range: `${SHEETS.CONTESTANTS}!A2:J100` 

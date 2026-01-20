@@ -7,12 +7,66 @@ const { SHEETS, getRange, parseRows } = require('../../src/utils/helpers');
 
 const API_BASE_URL = "https://finnhub.io/api/v1";
 
+const fetchAllData = async (tickers, apiKey) => {
+    const marketStatusReq = axios.get(`${API_BASE_URL}/stock/market-status?exchange=US&token=${apiKey}`);
+    const symbolListReq = axios.get(`${API_BASE_URL}/stock/symbol?exchange=US&token=${apiKey}`);
+
+    const priceReqs = tickers.map(t => 
+        axios.get(`${API_BASE_URL}/quote?symbol=${t}&token=${apiKey}`)
+    );
+
+    const [statusRes, symbolsRes, ...priceResults] = await Promise.all([
+        marketStatusReq,
+        symbolListReq,
+        ...priceReqs
+    ]);
+
+    const { isOpen, holiday } = statusRes.data;
+    const allSymbols = symbolsRes.data; 
+    
+    const prices = priceResults.map((res, i) => ({
+        ticker: tickers[i],
+        price: res.data.c,
+        dp: res.data.dp,
+        name: allSymbols.find(s => s.symbol === tickers[i])?.description || 'Unknown'
+    }));
+
+    return {
+        isMarketOpen: isOpen,
+        holidayName: holiday,
+        prices,
+        allSymbols
+    };
+};
+
+const deriveWinners = (records) => {
+    const winnersMap = {};
+    records.forEach(record => {
+        const year = record.year;
+        if (!year) return;
+        
+        if (!winnersMap[year]) winnersMap[year] = { year };
+        
+        const place = parseInt(record.place);
+        if (place === 1) {
+            winnersMap[year].first_user_name = record.name;
+            winnersMap[year].first_user_uuid = record.user_uuid;
+        } else if (place === 2) {
+            winnersMap[year].second_user_name = record.name;
+            winnersMap[year].second_user_uuid = record.user_uuid;
+        } else if (place === 3) {
+            winnersMap[year].third_user_name = record.name;
+            winnersMap[year].third_user_uuid = record.user_uuid;
+        }
+    });
+    return Object.values(winnersMap).sort((a, b) => b.year - a.year);
+};
+
 const handler = async (event) => {
     console.log("Starting scheduled sync...");
     const API_KEY = process.env.FINNHUB_KEY;
     const SHEET_ID = process.env.SHEET_ID;
     
-    // Initialize Redis
     const redis = new Redis({
         url: process.env.UPSTASH_REDIS_REST_URL,
         token: process.env.UPSTASH_REDIS_REST_TOKEN,
@@ -31,44 +85,7 @@ const handler = async (event) => {
         getRange(SHEETS.USERS),
         getRange(SHEETS.PRIZES),
         getRange(SHEETS.RECORDS),
-        getRange(SHEETS.WINNERS),
     ];
-
-    const fetchAllData = async (tickers) => {
-        // 1. Define the unique singular requests
-        const marketStatusReq = axios.get(`${API_BASE_URL}/stock/market-status?exchange=US&token=${API_KEY}`);
-        const symbolListReq = axios.get(`${API_BASE_URL}/stock/symbol?exchange=US&token=${API_KEY}`);
-
-        // 2. Define the mapped price requests
-        const priceReqs = tickers.map(t => 
-            axios.get(`${API_BASE_URL}/quote?symbol=${t}&token=${API_KEY}`)
-        );
-
-        // 3. Batch and Destructure
-        const [statusRes, symbolsRes, ...priceResults] = await Promise.all([
-            marketStatusReq,
-            symbolListReq,
-            ...priceReqs
-        ]);
-
-        // 4. Extract Data
-        const { isOpen, holiday } = statusRes.data;
-        const allSymbols = symbolsRes.data; 
-        
-        const prices = priceResults.map((res, i) => ({
-            ticker: tickers[i],
-            price: res.data.c,
-            dp: res.data.dp,
-            name: allSymbols.find(s => s.symbol === tickers[i])?.description || 'Unknown'
-        }));
-
-        return {
-            isMarketOpen: isOpen,
-            holidayName: holiday,
-            prices,
-            allSymbols
-        };
-    };
 
     try {
         const sheets = googleSheets.sheets({ version: 'v4', auth });
@@ -76,6 +93,8 @@ const handler = async (event) => {
             spreadsheetId: SHEET_ID,
             ranges,
         });
+        
+        const records = parseRows(response.data.valueRanges[5]);
 
         const sheetData = {
             contestants: parseRows(response.data.valueRanges[0]),
@@ -83,17 +102,16 @@ const handler = async (event) => {
             controls: parseRows(response.data.valueRanges[2])[0] || {},
             users: parseRows(response.data.valueRanges[3]),
             prizes: parseRows(response.data.valueRanges[4]),
-            records: parseRows(response.data.valueRanges[5]),
-            winners: parseRows(response.data.valueRanges[6]),
+            records: records,
+            winners: deriveWinners(records),
         };
 
-        // Scrub PII (Emails) before caching to prevent frontend exposure
         sheetData.contestants.forEach(c => delete c.email);
         sheetData.users.forEach(u => delete u.email);
 
         const tickers = [...new Set([...sheetData.contestants.map(c => c.ticker), ...sheetData.benchmarks.map(b => b.ticker)])].filter(Boolean);
 
-        const { isMarketOpen, prices, allSymbols } = await fetchAllData(tickers);
+        const { isMarketOpen, prices, allSymbols } = await fetchAllData(tickers, API_KEY);
 
         const historicalTickers = sheetData.records.map(r => r.ticker);
         const uniqueTickers = [...new Set([...tickers, ...historicalTickers])].filter(Boolean);
@@ -109,7 +127,6 @@ const handler = async (event) => {
 
         const payload = { sheetData, prices, isMarketOpen, stockNames };
         
-        // Cache for 15 minutes (900 seconds)
         await redis.set('STOCK_DASHBOARD_DATA', payload, { ex: 900 });
 
         console.log("Sync complete.");

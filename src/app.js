@@ -1,7 +1,3 @@
-/**
- * STONKS - PRIVATE API FRONTEND
- * Core Engine: Secure Data Integration
- */
 const UPDATE_INTERVAL = 5 * 60 * 1000;
 const CURRENCY_FORMAT = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
 
@@ -17,7 +13,6 @@ const PRIZE_STYLES = {
 };
 
 const initApp = async () => {
-    // Show loading state on initial load (if table is empty)
     const container = document.getElementById('leaderboard-body');
     if (container && container.children.length === 0) {
         container.innerHTML = `
@@ -42,15 +37,12 @@ const initApp = async () => {
         const data = await response.json();
         const { sheetData, prices, isMarketOpen, holidayName } = data;
         
-        // Update global market status
         updateMarketStatus({ isMarketOpen, holidayName });
 
-        // 0. Update Title immediately
         if (sheetData.controls?.title) {
             updateSiteTitle(sheetData.controls.title);
         }
 
-        // 1. Process Prizes
         currentPrizes = { benchmarks: {} };
         sheetData.prizes.forEach(p => {
             const rank = p.rank?.toString().toLowerCase();
@@ -60,7 +52,6 @@ const initApp = async () => {
             }
         });
 
-        // 2. Process Benchmarks
         sheetData.benchmarks.forEach(b => {
             if (b.ticker) {
                 currentPrizes.benchmarks[b.ticker.toUpperCase()] = { 
@@ -70,15 +61,13 @@ const initApp = async () => {
             }
         });
 
-        // 3. Handle Empty State vs Active Leaderboard
         const contestants = sheetData.contestants || [];
         
         if (contestants.length === 0 || (contestants.length === 1 && !contestants[0].ticker)) {
             renderEmptyState();
-            updateStats([]); // Reset stats to zero
+            updateStats([]);
             updateTopMover([]);
         } else {
-            // Link Results & Calculate Performance
             const results = contestants.map(c => {
                 const live = prices.find(p => p.ticker === (c.ticker || '').toUpperCase());
                 const currentPrice = live?.price || 0;
@@ -101,10 +90,8 @@ const initApp = async () => {
             updateTopMover(results);
         }
 
-        // 4. Update Global UI Components
         updateBenchmarks(prices);
 
-        // 5. Update Payment Button & Title from Controls
         const controls = sheetData.controls;
         if (controls) {
             if (controls.payment_url) {
@@ -132,8 +119,6 @@ const initApp = async () => {
     }
 };
 
-/** * UI Rendering Functions 
- */
 function renderEmptyState() {
     const container = document.getElementById('dashboard-content');
     container.innerHTML = `
@@ -291,7 +276,6 @@ function getPrizeBadge(index, totalCount) {
     return '';
 }
 
-// Global Event Listeners
 window.triggerPayment = () => {
     if (window.payment_url) window.location.href = window.payment_url;
 };
@@ -303,7 +287,6 @@ window.openEntryForm = () => {
 document.addEventListener('DOMContentLoaded', initApp);
 setInterval(initApp, UPDATE_INTERVAL);
 
-// Force Tailwind to generate these classes by mentioning them in a string
 const _safelist = `
     bg-emerald-300/20 text-emerald-300 border-emerald-300/50 bg-emerald-950/20 
     border-emerald-500/20 text-emerald-300/70 to-emerald-500 hover:bg-emerald-500/10 
