@@ -51,8 +51,7 @@ describe('Scheduled Worker: sync-stock-data', () => {
                                 { values: [['key', 'value']] },
                                 { values: [['id', 'name', 'email'], ['u1', 'Neal', 'neal@email.com']] },
                                 { values: [] },
-                                { values: [] },
-                                { values: [] }
+                                { values: [['user_uuid', 'name', 'place', 'year'], ['u1', 'Neal', '1', '2025']] }
                             ]
                         }
                     })
@@ -80,6 +79,7 @@ describe('Scheduled Worker: sync-stock-data', () => {
             
             assert.ok(payloadString.includes('AAPL'), 'Should contain ticker data');
             assert.ok(payloadString.includes('Apple Inc'), 'Should contain enriched stock name');
+            assert.ok(payloadString.includes('first_user_name'), 'Should contain derived winner data');
             
             assert.ok(!payloadString.includes('test@email.com'), 'Contestant email should be scrubbed');
             assert.ok(!payloadString.includes('neal@email.com'), 'User email should be scrubbed');

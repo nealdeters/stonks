@@ -39,6 +39,29 @@ const fetchAllData = async (tickers, apiKey) => {
     };
 };
 
+const deriveWinners = (records) => {
+    const winnersMap = {};
+    records.forEach(record => {
+        const year = record.year;
+        if (!year) return;
+        
+        if (!winnersMap[year]) winnersMap[year] = { year };
+        
+        const place = parseInt(record.place);
+        if (place === 1) {
+            winnersMap[year].first_user_name = record.name;
+            winnersMap[year].first_user_uuid = record.user_uuid;
+        } else if (place === 2) {
+            winnersMap[year].second_user_name = record.name;
+            winnersMap[year].second_user_uuid = record.user_uuid;
+        } else if (place === 3) {
+            winnersMap[year].third_user_name = record.name;
+            winnersMap[year].third_user_uuid = record.user_uuid;
+        }
+    });
+    return Object.values(winnersMap).sort((a, b) => b.year - a.year);
+};
+
 const handler = async (event) => {
     console.log("Starting scheduled sync...");
     const API_KEY = process.env.FINNHUB_KEY;
@@ -62,7 +85,6 @@ const handler = async (event) => {
         getRange(SHEETS.USERS),
         getRange(SHEETS.PRIZES),
         getRange(SHEETS.RECORDS),
-        getRange(SHEETS.WINNERS),
     ];
 
     try {
@@ -71,6 +93,8 @@ const handler = async (event) => {
             spreadsheetId: SHEET_ID,
             ranges,
         });
+        
+        const records = parseRows(response.data.valueRanges[5]);
 
         const sheetData = {
             contestants: parseRows(response.data.valueRanges[0]),
@@ -78,8 +102,8 @@ const handler = async (event) => {
             controls: parseRows(response.data.valueRanges[2])[0] || {},
             users: parseRows(response.data.valueRanges[3]),
             prizes: parseRows(response.data.valueRanges[4]),
-            records: parseRows(response.data.valueRanges[5]),
-            winners: parseRows(response.data.valueRanges[6]),
+            records: records,
+            winners: deriveWinners(records),
         };
 
         sheetData.contestants.forEach(c => delete c.email);
