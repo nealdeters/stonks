@@ -56,8 +56,8 @@
         </div>
 
         <div class="leaderboard-card-container bg-indigo-950/10 border border-indigo-500/10 shadow-2xl mb-20">
-            <table class="w-full text-left border-separate border-spacing-0">
-                <thead class="text-slate-300 text-[10px] uppercase font-black tracking-widest bg-indigo-500/5">
+            <table id="stats-table" class="w-full text-left border-separate border-spacing-0 block md:table">
+                <thead class="text-slate-300 text-[10px] uppercase font-black tracking-widest bg-indigo-500/5 hidden md:table-header-group">
                     <tr>
                         <th class="px-8 py-6">Year</th>
                         <th class="px-8 py-6">Stock Pick</th>
@@ -65,7 +65,7 @@
                         <th class="px-8 py-6 text-right">% Return</th>
                     </tr>
                 </thead>
-                <tbody id="stats-body" class="divide-y divide-indigo-500/10">
+                <tbody id="stats-body" class="block md:table-row-group">
                     </tbody>
             </table>
         </div>

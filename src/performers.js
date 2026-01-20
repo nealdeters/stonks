@@ -2,6 +2,20 @@ const initPerformers = async () => {
     const { color: themeColor } = applyGlobalTheme();
 
     try {
+        const container = document.getElementById('performers-body');
+        if (container) {
+            container.innerHTML = `
+                <tr class="block md:table-row w-full animate-pulse">
+                    <td colspan="5" class="block md:table-cell w-full p-8 text-center">
+                        <div class="flex flex-col items-center justify-center p-12 rounded-[2.5rem] bg-${themeColor}-950/20 border border-${themeColor}-500/10">
+                            <div class="text-5xl mb-4 opacity-50 grayscale">⏳</div>
+                            <h3 class="text-lg font-black text-white uppercase tracking-widest mb-2">Syncing Data</h3>
+                            <p class="text-${themeColor}-300/50 text-xs font-bold uppercase tracking-widest">Fetching latest updates...</p>
+                        </div>
+                    </td>
+                </tr>`;
+        }
+
         const response = await fetch(`/.netlify/functions/fetch-data`);
         const data = await response.json();
         
@@ -12,11 +26,19 @@ const initPerformers = async () => {
             updateSiteTitle(controls.title);
         }
 
-        const container = document.getElementById('performers-body');
         if (!container) return;
 
         if (!records || records.length === 0) {
-            container.innerHTML = `<tr><td colspan="5" class="p-20 text-center text-slate-500 font-bold uppercase tracking-widest">No records found.</td></tr>`;
+            container.innerHTML = `
+                <tr class="block md:table-row w-full">
+                    <td colspan="5" class="block md:table-cell w-full p-8 text-center">
+                        <div class="flex flex-col items-center justify-center p-12 rounded-[2.5rem] bg-${themeColor}-950/20 border border-${themeColor}-500/10">
+                            <div class="text-5xl mb-4 opacity-50 grayscale">📉</div>
+                            <h3 class="text-lg font-black text-white uppercase tracking-widest mb-2">No Records Found</h3>
+                            <p class="text-${themeColor}-300/50 text-xs font-bold uppercase tracking-widest">The archives appear to be empty.</p>
+                        </div>
+                    </td>
+                </tr>`;
             return;
         }
 
@@ -59,9 +81,9 @@ const initPerformers = async () => {
             return `
                 <tr class="block md:table-row hover:bg-${themeColor}-500/5 transition-all border-b border-${themeColor}-500/10 last:border-0 group">
                     <td class="hidden md:table-cell px-8 py-6 font-mono font-bold text-${themeColor}-400">#${index + 1}</td>
-                    <td class="px-8 py-4 md:py-6 block md:table-cell">
+                    <td class="px-8 py-4 block md:table-cell">
                         <div class="flex items-center gap-4">
-                            <span class="md:hidden text-xs font-mono text-${themeColor}-400 font-bold">#${index + 1}</span>
+                            <span class="md:hidden text-xs font-mono text-${themeColor}-400 font-bold w-6">#${index + 1}</span>
                             <a href="/stats?uuid=${row.uuid}" class="text-white font-black hover:text-${themeColor}-400 transition-all cursor-pointer group flex items-center gap-2">
                                 <span class="text-lg md:text-base">${row.name}</span>
                                 <span class="text-[8px] opacity-0 group-hover:opacity-100 transform translate-x-[-4px] group-hover:translate-x-0 transition-all bg-${themeColor}-500/20 px-2 py-0.5 rounded border border-${themeColor}-500/30 text-${themeColor}-300 whitespace-nowrap">
@@ -70,15 +92,15 @@ const initPerformers = async () => {
                             </a>
                         </div>
                     </td>
-                    <td class="px-8 py-2 md:py-6 block md:table-cell text-left md:text-center">
-                        <div class="flex justify-between items-center md:block">
-                            <span class="text-slate-400 text-[10px] uppercase font-black md:hidden">Seasons</span>
+                    <td class="px-8 py-3 md:py-6 block md:table-cell text-left md:text-center">
+                        <span class="text-slate-400 text-[10px] uppercase font-black md:hidden pt-1">Seasons</span>
+                        <div class="flex flex-col items-end md:block">
                             <div class="font-mono text-slate-300 font-bold">${row.seasons}</div>
                         </div>
                     </td>
-                    <td class="px-8 py-2 md:py-6 block md:table-cell text-left md:text-center">
-                        <div class="flex justify-between items-center md:block">
-                            <span class="text-slate-400 text-[10px] uppercase font-black md:hidden">Medals</span>
+                    <td class="px-8 py-3 md:py-6 block md:table-cell text-left md:text-center">
+                        <span class="text-slate-400 text-[10px] uppercase font-black md:hidden pt-1">Medals</span>
+                        <div class="flex flex-col items-end md:block">
                             <div class="flex justify-end md:justify-center gap-2 text-xs font-bold">
                                 ${row.gold > 0 ? `<span class="px-2 py-1 bg-amber-500/10 text-amber-400 rounded border border-amber-500/20" title="Gold">🥇 ${row.gold}</span>` : ''}
                                 ${row.silver > 0 ? `<span class="px-2 py-1 bg-slate-500/10 text-slate-300 rounded border border-slate-500/20" title="Silver">🥈 ${row.silver}</span>` : ''}
@@ -87,9 +109,9 @@ const initPerformers = async () => {
                             </div>
                         </div>
                     </td>
-                    <td class="px-8 py-4 md:py-6 block md:table-cell text-right">
-                        <div class="flex justify-between items-center md:block">
-                            <span class="text-slate-400 text-[10px] uppercase font-black md:hidden">Avg Return</span>
+                    <td class="px-8 py-3 md:py-6 block md:table-cell text-left md:text-right">
+                        <span class="text-slate-400 text-[10px] uppercase font-black md:hidden pt-1">Avg Return</span>
+                        <div class="flex flex-col items-end md:block">
                             <div class="font-mono font-bold ${isPos ? 'text-emerald-400' : 'text-red-400'} text-lg md:text-base">
                                 ${isPos ? '+' : ''}${avg}%
                             </div>
@@ -101,6 +123,19 @@ const initPerformers = async () => {
 
     } catch (err) {
         console.error("Performers Load Error:", err);
+        const container = document.getElementById('performers-body');
+        if (container) {
+            container.innerHTML = `
+                <tr class="block md:table-row w-full">
+                    <td colspan="5" class="block md:table-cell w-full p-8 text-center">
+                        <div class="flex flex-col items-center justify-center p-12 rounded-[2.5rem] bg-red-950/20 border border-red-500/10">
+                            <div class="text-5xl mb-4 opacity-50 grayscale">⚠️</div>
+                            <h3 class="text-lg font-black text-white uppercase tracking-widest mb-2">System Error</h3>
+                            <p class="text-red-300/50 text-xs font-bold uppercase tracking-widest">Unable to load performers data.</p>
+                        </div>
+                    </td>
+                </tr>`;
+        }
     }
 };
 
@@ -118,4 +153,8 @@ const _safelist = `
     bg-slate-500/10 text-slate-300 border-slate-500/20
     bg-emerald-500/20 border-emerald-500/30 text-emerald-300
     bg-orange-500/20 border-orange-500/30 text-orange-300
+    bg-emerald-950/20 border-emerald-500/10 text-emerald-300/50
+    bg-orange-950/20 border-orange-500/10 text-orange-300/50
+    bg-indigo-950/20 border-indigo-500/10 text-indigo-300/50
+    bg-red-950/20 border-red-500/10 text-red-300/50
 `;

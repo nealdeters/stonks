@@ -38,7 +38,8 @@ main {
 /* SECONDARY STICKY: Table Headers */
 @media (min-width: 768px) {
     #leaderboard-table thead th,
-    #performers-table thead th {
+    #performers-table thead th,
+    #stats-table thead th {
         position: sticky;
         top: 111px; 
         z-index: 50;
@@ -49,9 +50,11 @@ main {
     }
 
     #leaderboard-table thead th:first-child,
-    #performers-table thead th:first-child { border-top-left-radius: 2.5rem; }
+    #performers-table thead th:first-child,
+    #stats-table thead th:first-child { border-top-left-radius: 2.5rem; }
     #leaderboard-table thead th:last-child,
-    #performers-table thead th:last-child { border-top-right-radius: 2.5rem; }
+    #performers-table thead th:last-child,
+    #stats-table thead th:last-child { border-top-right-radius: 2.5rem; }
 }
 
 /* Sticky Footer Base Styling */

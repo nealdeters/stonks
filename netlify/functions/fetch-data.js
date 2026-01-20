@@ -82,18 +82,8 @@ exports.handler = async () => {
 
         const tickers = [...new Set([...sheetData.contestants.map(c => c.ticker), ...sheetData.benchmarks.map(b => b.ticker)])].filter(Boolean);
 
-        // const priceRequests = tickers.map(t => 
-        //     axios.get(`${API_BASE_URL}/quote?symbol=${t}&token=${API_KEY}`)
-        // );
-        
-        // const symbolListRequest = axios.get(`${API_BASE_URL}/stock/symbol?exchange=US&token=${API_KEY}`);
-        // const [symbolListResult, ...priceResults] = await Promise.all([
-        //     symbolListRequest,
-        //     ...priceRequests
-        // ]);
         const { isMarketOpen, prices, allSymbols } = await fetchAllData(tickers);
 
-        // Generate Name Map for all historical and active tickers
         const historicalTickers = sheetData.records.map(r => r.ticker);
         const uniqueTickers = [...new Set([...tickers, ...historicalTickers])].filter(Boolean);
         
@@ -105,20 +95,6 @@ exports.handler = async () => {
                 if (match) stockNames[upperT] = match.description;
             });
         }
-
-        // const symbolMap = new Map(
-        //     Array.isArray(symbolListResult.data) ? symbolListResult.data.map(item => [item.symbol, item.description]) : []
-        // );
-
-        // const prices = tickers.map((ticker, i) => {
-        //     const res = priceResults[i];
-        //     return {
-        //         ticker,
-        //         name: symbolMap.get(ticker) || ticker,
-        //         price: res.data?.c || 0,
-        //         dp: res.data?.dp || 0
-        //     };
-        // });
 
         return { 
             statusCode: 200, 

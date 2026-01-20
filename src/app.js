@@ -17,6 +17,21 @@ const PRIZE_STYLES = {
 };
 
 const initApp = async () => {
+    // Show loading state on initial load (if table is empty)
+    const container = document.getElementById('leaderboard-body');
+    if (container && container.children.length === 0) {
+        container.innerHTML = `
+            <tr class="block md:table-row w-full animate-pulse">
+                <td colspan="5" class="block md:table-cell w-full p-8 text-center">
+                    <div class="flex flex-col items-center justify-center p-12 rounded-[2.5rem] bg-${themeColor}-950/20 border border-${themeColor}-500/10">
+                        <div class="text-5xl mb-4 opacity-50 grayscale">⏳</div>
+                        <h3 class="text-lg font-black text-white uppercase tracking-widest mb-2">Syncing Data</h3>
+                        <p class="text-${themeColor}-300/50 text-xs font-bold uppercase tracking-widest">Fetching latest updates...</p>
+                    </div>
+                </td>
+            </tr>`;
+    }
+
     try {
         const response = await fetch(`/.netlify/functions/fetch-data`);
         if (!response.ok) {
@@ -294,4 +309,7 @@ const _safelist = `
     border-emerald-500/20 text-emerald-300/70 to-emerald-500 hover:bg-emerald-500/10 
     border-emerald-500/20 text-emerald-400 bg-emerald-500/20 border-emerald-500/30 
     text-emerald-200 bg-emerald-500/5 border-emerald-500/10
+    bg-emerald-950/20 border-emerald-500/10 text-emerald-300/50
+    bg-orange-950/20 border-orange-500/10 text-orange-300/50
+    bg-indigo-950/20 border-indigo-500/10 text-indigo-300/50
 `;

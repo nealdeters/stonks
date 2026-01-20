@@ -18,6 +18,13 @@ const initSubmit = () => {
             const errEl = document.getElementById('error-message');
             const formData = new FormData(e.target);
             
+            // Sanitize inputs to prevent Formula Injection
+            for (const [key, value] of Array.from(formData.entries())) {
+                if (typeof value === 'string' && /^[=+\-@]/.test(value)) {
+                    formData.set(key, `'${value}`);
+                }
+            }
+            
             btn.disabled = true;
             const originalText = btn.innerText;
             btn.innerText = "Processing...";
