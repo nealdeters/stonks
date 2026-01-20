@@ -58,7 +58,7 @@ function renderWinnerSlot(name, uuid, rank, color, emoji, themeColor = 'indigo')
         <div class="text-2xl">${emoji}</div>
         <div class="overflow-hidden">
             <p class="text-[9px] font-black uppercase tracking-widest text-${color}">${rank} Place</p>
-            <p class="text-sm font-bold text-white group-hover:text-${color} transition-colors truncate">${name}</p>
+            <p class="text-sm font-bold text-white group-hover:text-${color} transition-colors truncate">${escapeHtml(name)}</p>
         </div>
     </a>`;
 }

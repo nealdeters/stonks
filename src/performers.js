@@ -82,7 +82,7 @@ const initPerformers = async () => {
                         <div class="flex items-center gap-4">
                             <span class="md:hidden text-xs font-mono text-${themeColor}-400 font-bold w-6">#${index + 1}</span>
                             <a href="/stats?uuid=${row.uuid}" class="text-white font-black hover:text-${themeColor}-400 transition-all cursor-pointer group flex items-center gap-2">
-                                <span class="text-lg md:text-base">${row.name}</span>
+                                <span class="text-lg md:text-base">${escapeHtml(row.name)}</span>
                                 <span class="text-[8px] opacity-0 group-hover:opacity-100 transform translate-x-[-4px] group-hover:translate-x-0 transition-all bg-${themeColor}-500/20 px-2 py-0.5 rounded border border-${themeColor}-500/30 text-${themeColor}-300 whitespace-nowrap">
                                     VIEW CAREER
                                 </span>
@@ -136,7 +136,11 @@ const initPerformers = async () => {
     }
 };
 
-document.addEventListener('DOMContentLoaded', initPerformers);
+const isTest = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
+
+if (typeof window !== 'undefined' && !isTest) {
+    document.addEventListener('DOMContentLoaded', initPerformers);
+}
 
 if (typeof module !== 'undefined') {
     module.exports = { initPerformers };

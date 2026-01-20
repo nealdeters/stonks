@@ -72,8 +72,8 @@ const initStats = async () => {
         }
 
         const userName = userHistory[0].name || "Participant";
-        document.getElementById('user-name-title').innerText = `${userName} Stats`;
-        document.title = `${userName} - Performance Stats`;
+        document.getElementById('user-name-title').innerText = `${userName}`;
+        document.title = `${userName} - Career Performance`;
 
         const goldCount = userHistory.filter(row => parseInt(row.place) === 1).length;
         const silverCount = userHistory.filter(row => parseInt(row.place) === 2).length;
@@ -107,8 +107,8 @@ const initStats = async () => {
                     <td class="px-8 py-3 md:py-6 block md:table-cell text-left md:text-left">
                         <span class="text-slate-400 text-[10px] uppercase font-black md:hidden pt-1">Stock Pick</span>
                         <div class="flex flex-col items-end md:block">
-                            <span class="text-white font-black">${row.ticker}</span>
-                            <p class="text-[9px] text-slate-500 uppercase tracking-widest mt-1">${stockName}</p>
+                            <span class="text-white font-black">${escapeHtml(row.ticker)}</span>
+                            <p class="text-[9px] text-slate-500 uppercase tracking-widest mt-1">${escapeHtml(stockName)}</p>
                         </div>
                     </td>
                     <td class="px-8 py-3 md:py-6 block md:table-cell text-left md:text-center">
@@ -136,8 +136,6 @@ const initStats = async () => {
         document.getElementById('stats-body').innerHTML = `<tr class="block md:table-row w-full"><td colspan="4" class="block md:table-cell w-full p-20 text-center text-red-500 font-black uppercase">Critical System Failure: Check Console</td></tr>`;
     }
 };
-
-document.addEventListener('DOMContentLoaded', initStats);
 
 const isTest = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
 

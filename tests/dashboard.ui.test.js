@@ -1,35 +1,18 @@
-const { test, describe, before, after } = require('node:test');
+const { test, describe, before, after, beforeEach } = require('node:test');
 const assert = require('node:assert');
 const path = require('path');
-const http = require('node:http');
-const fs = require('node:fs');
 const { launchBrowser } = require('./helpers/browser');
 
 describe('Stonks UI Tests', { timeout: 60000 }, () => {
     let browser;
     let page;
-    let server;
-    const PORT = 3000;
 
     before(async () => {
-        server = http.createServer((req, res) => {
-            let urlPath = req.url === '/' ? '/index.html' : req.url;
-            urlPath = urlPath.split('?')[0];
-            const filePath = path.join(process.cwd(), urlPath);
-
-            if (fs.existsSync(filePath) && fs.lstatSync(filePath).isFile()) {
-                res.writeHead(200);
-                fs.createReadStream(filePath).pipe(res);
-            } else {
-                res.writeHead(404);
-                res.end();
-            }
-        });
-        await new Promise(resolve => server.listen(PORT, resolve));
-
         browser = await launchBrowser();
-        page = await browser.newPage();
+    });
 
+    beforeEach(async () => {
+        page = await browser.newPage();
         await page.setRequestInterception(true);
         page.on('request', async (req) => {
             const url = req.url();
@@ -63,17 +46,17 @@ describe('Stonks UI Tests', { timeout: 60000 }, () => {
             req.continue();
         });
 
-        await page.goto(`http://localhost:${PORT}`, { waitUntil: 'networkidle0' });
+        const filePath = `file://${path.join(process.cwd(), 'index.html')}`;
+        await page.goto(filePath, { waitUntil: 'networkidle0' });
+        await page.setViewport({ width: 1200, height: 800 });
+        await page.waitForSelector('#leaderboard-body tr:not(.animate-pulse)', { timeout: 15000 });
     });
 
     after(async () => {
-        if (browser) await browser.close();
-        if (server) server.close();
+        await browser.close();
     });
 
     test('Headers are correct on Desktop', async () => {
-        await page.setViewport({ width: 1200, height: 800 });
-        await page.waitForSelector('#leaderboard-body tr', { timeout: 15000 });
         const headers = await page.$$eval('thead th', ths => ths.map(th => th.innerText.trim()).filter(t => t !== ""));
         assert.ok(headers.includes('PARTICIPANT'), 'Missing header: PARTICIPANT');
     });

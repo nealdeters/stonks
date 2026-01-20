@@ -116,6 +116,19 @@ const initApp = async () => {
 
     } catch (err) {
         console.error("Critical System Failure:", err);
+        const container = document.getElementById('leaderboard-body');
+        if (container) {
+            container.innerHTML = `
+                <tr class="block md:table-row w-full">
+                    <td colspan="5" class="block md:table-cell w-full p-8 text-center">
+                        <div class="flex flex-col items-center justify-center p-12 rounded-[2.5rem] bg-red-950/20 border border-red-500/10">
+                            <div class="text-5xl mb-4 opacity-50 grayscale">⚠️</div>
+                            <h3 class="text-lg font-black text-white uppercase tracking-widest mb-2">System Error</h3>
+                            <p class="text-red-300/50 text-xs font-bold uppercase tracking-widest">Unable to load dashboard data.</p>
+                        </div>
+                    </td>
+                </tr>`;
+        }
     }
 };
 
@@ -153,7 +166,7 @@ function renderLeaderboard(results, sheetData) {
                     <div class="flex flex-col gap-1.5">
                         <div class="flex items-center gap-2">
                             <a href="/stats?uuid=${res.user_uuid}" class="text-white font-black hover:text-cyan-400 transition-all cursor-pointer group flex items-center gap-2">
-                                <span class="text-base md:text-sm tracking-tight">${res.name}</span>
+                                <span class="text-base md:text-sm tracking-tight">${escapeHtml(res.name)}</span>
                                 <span class="text-[8px] opacity-0 group-hover:opacity-100 transform translate-x-[-4px] group-hover:translate-x-0 transition-all bg-${themeColor}-500/20 px-2 py-0.5 rounded border border-${themeColor}-500/30 text-${themeColor}-300 whitespace-nowrap">
                                     VIEW CAREER
                                 </span>
@@ -168,8 +181,8 @@ function renderLeaderboard(results, sheetData) {
             <td class="px-8 py-3 md:py-5 block md:table-cell text-left md:text-center">
                 <span class="text-slate-400 text-[10px] uppercase font-black md:hidden pt-1">Stock</span>
                 <div class="flex flex-col items-end md:items-center">
-                    <span class="bg-${themeColor}-500/20 text-${themeColor}-200 px-2.5 py-1 rounded text-[10px] font-black tracking-widest border border-${themeColor}-500/30">${res.ticker}</span>
-                    <span class="text-[9px] text-slate-300 mt-2 font-bold uppercase tracking-widest">${res.stockname}</span>
+                    <span class="bg-${themeColor}-500/20 text-${themeColor}-200 px-2.5 py-1 rounded text-[10px] font-black tracking-widest border border-${themeColor}-500/30">${escapeHtml(res.ticker)}</span>
+                    <span class="text-[9px] text-slate-300 mt-2 font-bold uppercase tracking-widest">${escapeHtml(res.stockname)}</span>
                 </div>
             </td>
             <td class="px-8 py-3 md:py-5 block md:table-cell text-left md:text-right">
