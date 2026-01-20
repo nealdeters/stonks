@@ -7,6 +7,9 @@ const initWinners = async () => {
         
         const winners = data.sheetData?.winners || data.winners;
         const controls = data.sheetData?.controls || data.controls;
+        const contestants = data.sheetData?.contestants || [];
+
+        initTicker(data.prices || [], contestants);
 
         if (controls?.title) {
             updateSiteTitle(controls.title);

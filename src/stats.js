@@ -31,6 +31,9 @@ const initStats = async () => {
         const controls = data.sheetData?.controls || data.controls;
         const prices = data.prices || [];
         const stockNames = data.stockNames || {};
+        const contestants = data.sheetData?.contestants || [];
+
+        initTicker(prices, contestants);
 
         if (controls?.title) {
             updateSiteTitle(controls.title);
