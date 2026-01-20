@@ -16,7 +16,7 @@ exports.handler = async (event) => {
             formData = JSON.parse(event.body);
         }
     } catch (e) {
-         formData = Object.fromEntries(new URLSearchParams(event.body));
+        formData = Object.fromEntries(new URLSearchParams(event.body));
     }
 
     const { name, email, ticker, secret } = formData;
@@ -30,7 +30,7 @@ exports.handler = async (event) => {
         scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
 
-     if (!secret || secret !== APP_SECRET) {
+    if (!secret || secret !== APP_SECRET) {
         return { 
             statusCode: 422, 
             headers: HEADERS, 

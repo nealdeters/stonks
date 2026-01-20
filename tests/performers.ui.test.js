@@ -1,7 +1,7 @@
-const puppeteer = require('puppeteer');
 const path = require('path');
-const test = require('node:test');
+const { test, describe, before, after, beforeEach } = require('node:test');
 const assert = require('node:assert');
+const { launchBrowser } = require('./helpers/browser');
 
 const MOCK_DATA = {
     sheetData: {
@@ -15,40 +15,49 @@ const MOCK_DATA = {
     }
 };
 
-test('Performers UI: Renders and Sorts Correctly', async () => {
-    const browser = await puppeteer.launch({
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        headless: true
-    });
-    const page = await browser.newPage();
+describe('Performers UI', () => {
+    let browser;
+    let page;
 
-    await page.setRequestInterception(true);
-    page.on('request', req => {
-        if (req.url().includes('fetch-data')) {
-            req.respond({
-                status: 200,
-                contentType: 'application/json',
-                body: JSON.stringify(MOCK_DATA)
-            });
-        } else {
-            req.continue();
-        }
+    before(async () => {
+        browser = await launchBrowser();
     });
 
-    const filePath = path.join(__dirname, '../performers.html');
-    await page.goto(`file://${filePath}`, { waitUntil: 'networkidle0' });
+    after(async () => {
+        await browser.close();
+    });
 
-    const title = await page.$eval('header h1', el => el.innerText);
-    assert.strictEqual(title, 'TEST CUP', 'Header title should be updated from controls');
+    beforeEach(async () => {
+        page = await browser.newPage();
+    });
 
-    const rows = await page.$$('tbody tr');
-    assert.strictEqual(rows.length, 3, 'Should render 3 rows for 3 unique users');
+    test('Renders and Sorts Correctly', async () => {
+        await page.setRequestInterception(true);
+        page.on('request', req => {
+            if (req.url().includes('fetch-data')) {
+                req.respond({
+                    status: 200,
+                    contentType: 'application/json',
+                    body: JSON.stringify(MOCK_DATA)
+                });
+            } else {
+                req.continue();
+            }
+        });
 
-    const firstRowName = await rows[0].$eval('td:nth-child(2)', el => el.innerText);
-    const firstRowAvg = await rows[0].$eval('td:nth-child(5)', el => el.innerText);
-    
-    assert.ok(firstRowName.includes('Alice'), 'First row should be Alice (100% avg)');
-    assert.ok(firstRowAvg.includes('+100.00%'), 'First row avg should be +100.00%');
+        const filePath = path.join(__dirname, '../performers.html');
+        await page.goto(`file://${filePath}`, { waitUntil: 'networkidle0' });
 
-    await browser.close();
+        const title = await page.$eval('header h1', el => el.innerText);
+        assert.strictEqual(title, 'TEST CUP', 'Header title should be updated from controls');
+
+        const rows = await page.$$('tbody tr');
+        assert.strictEqual(rows.length, 3, 'Should render 3 rows for 3 unique users');
+
+        const firstRowName = await rows[0].$eval('td:nth-child(2)', el => el.innerText);
+        const firstRowAvg = await rows[0].$eval('td:nth-child(5)', el => el.innerText);
+        
+        assert.ok(firstRowName.includes('Alice'), 'First row should be Alice (100% avg)');
+        assert.ok(firstRowAvg.includes('+100.00%'), 'First row avg should be +100.00%');
+    });
 });
