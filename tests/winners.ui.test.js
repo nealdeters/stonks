@@ -17,7 +17,6 @@ describe('Winners UI Integration', () => {
     });
 
     test('should render the podium from mock API data', async () => {
-        // 1. Enable request interception to mock the Netlify function
         await page.setRequestInterception(true);
         page.on('request', (request) => {
             if (request.url().includes('fetch-data')) {
@@ -46,11 +45,9 @@ describe('Winners UI Integration', () => {
             }
         });
 
-        // 2. Navigate to the local file
         const filePath = `file://${path.join(__dirname, '../winners.html')}`;
         await page.goto(filePath, { waitUntil: 'networkidle0' });
 
-        // 3. Assertions
         const headerText = await page.$eval('header h1', el => el.innerText);
         assert.strictEqual(headerText.toUpperCase(), 'TEST CHAMPIONSHIP', "Header should sync with control title");
 

@@ -31,9 +31,9 @@ describe('Participant Stats UI', () => {
                     body: JSON.stringify({
                         sheetData: {
                             records: [
-                                { user_uuid: targetUuid, name: "Neal Deters", year: "2025", percent_gain: "15.5", place: "1", ticker: "NVDA" }, // Gold
-                                { user_uuid: targetUuid, name: "Neal Deters", year: "2024", percent_gain: "5.5", place: "2", ticker: "AAPL" },  // Silver
-                                { user_uuid: targetUuid, name: "Neal Deters", year: "2023", percent_gain: "2.0", place: "3", ticker: "MSFT" },  // Bronze
+                                { user_uuid: targetUuid, name: "Neal Deters", year: "2025", percent_gain: "15.5", place: "1", ticker: "NVDA" },
+                                { user_uuid: targetUuid, name: "Neal Deters", year: "2024", percent_gain: "5.5", place: "2", ticker: "AAPL" },
+                                { user_uuid: targetUuid, name: "Neal Deters", year: "2023", percent_gain: "2.0", place: "3", ticker: "MSFT" },
                                 { user_uuid: "other-user", name: "Someone Else", year: "2024", percent_gain: "50", place: "1", ticker: "TSLA" }
                             ]
                         }
@@ -45,7 +45,6 @@ describe('Participant Stats UI', () => {
         const filePath = `file://${path.join(__dirname, '../stats.html')}?uuid=${targetUuid}`;
         await page.goto(filePath, { waitUntil: 'networkidle0' });
 
-        // Update assertions from #stat-wins to individual medals
         const gold = await page.$eval('#stat-gold', el => el.innerText);
         const silver = await page.$eval('#stat-silver', el => el.innerText);
         const bronze = await page.$eval('#stat-bronze', el => el.innerText);

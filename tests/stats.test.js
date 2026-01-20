@@ -44,7 +44,6 @@ describe('Stats Logic & Calculation', () => {
         const filePath = `file://${path.join(__dirname, '../stats.html')}?uuid=${targetUuid}`;
         await page.goto(filePath, { waitUntil: 'networkidle0' });
 
-        // Check new medal IDs instead of old stat-wins
         const goldCount = await page.$eval('#stat-gold', el => el.innerText);
         const silverCount = await page.$eval('#stat-silver', el => el.innerText);
         

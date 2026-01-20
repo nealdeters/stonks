@@ -7,12 +7,43 @@ const { SHEETS, getRange, parseRows } = require('../../src/utils/helpers');
 
 const API_BASE_URL = "https://finnhub.io/api/v1";
 
+const fetchAllData = async (tickers, apiKey) => {
+    const marketStatusReq = axios.get(`${API_BASE_URL}/stock/market-status?exchange=US&token=${apiKey}`);
+    const symbolListReq = axios.get(`${API_BASE_URL}/stock/symbol?exchange=US&token=${apiKey}`);
+
+    const priceReqs = tickers.map(t => 
+        axios.get(`${API_BASE_URL}/quote?symbol=${t}&token=${apiKey}`)
+    );
+
+    const [statusRes, symbolsRes, ...priceResults] = await Promise.all([
+        marketStatusReq,
+        symbolListReq,
+        ...priceReqs
+    ]);
+
+    const { isOpen, holiday } = statusRes.data;
+    const allSymbols = symbolsRes.data; 
+    
+    const prices = priceResults.map((res, i) => ({
+        ticker: tickers[i],
+        price: res.data.c,
+        dp: res.data.dp,
+        name: allSymbols.find(s => s.symbol === tickers[i])?.description || 'Unknown'
+    }));
+
+    return {
+        isMarketOpen: isOpen,
+        holidayName: holiday,
+        prices,
+        allSymbols
+    };
+};
+
 const handler = async (event) => {
     console.log("Starting scheduled sync...");
     const API_KEY = process.env.FINNHUB_KEY;
     const SHEET_ID = process.env.SHEET_ID;
     
-    // Initialize Redis
     const redis = new Redis({
         url: process.env.UPSTASH_REDIS_REST_URL,
         token: process.env.UPSTASH_REDIS_REST_TOKEN,
@@ -34,42 +65,6 @@ const handler = async (event) => {
         getRange(SHEETS.WINNERS),
     ];
 
-    const fetchAllData = async (tickers) => {
-        // 1. Define the unique singular requests
-        const marketStatusReq = axios.get(`${API_BASE_URL}/stock/market-status?exchange=US&token=${API_KEY}`);
-        const symbolListReq = axios.get(`${API_BASE_URL}/stock/symbol?exchange=US&token=${API_KEY}`);
-
-        // 2. Define the mapped price requests
-        const priceReqs = tickers.map(t => 
-            axios.get(`${API_BASE_URL}/quote?symbol=${t}&token=${API_KEY}`)
-        );
-
-        // 3. Batch and Destructure
-        const [statusRes, symbolsRes, ...priceResults] = await Promise.all([
-            marketStatusReq,
-            symbolListReq,
-            ...priceReqs
-        ]);
-
-        // 4. Extract Data
-        const { isOpen, holiday } = statusRes.data;
-        const allSymbols = symbolsRes.data; 
-        
-        const prices = priceResults.map((res, i) => ({
-            ticker: tickers[i],
-            price: res.data.c,
-            dp: res.data.dp,
-            name: allSymbols.find(s => s.symbol === tickers[i])?.description || 'Unknown'
-        }));
-
-        return {
-            isMarketOpen: isOpen,
-            holidayName: holiday,
-            prices,
-            allSymbols
-        };
-    };
-
     try {
         const sheets = googleSheets.sheets({ version: 'v4', auth });
         const response = await sheets.spreadsheets.values.batchGet({
@@ -87,13 +82,12 @@ const handler = async (event) => {
             winners: parseRows(response.data.valueRanges[6]),
         };
 
-        // Scrub PII (Emails) before caching to prevent frontend exposure
         sheetData.contestants.forEach(c => delete c.email);
         sheetData.users.forEach(u => delete u.email);
 
         const tickers = [...new Set([...sheetData.contestants.map(c => c.ticker), ...sheetData.benchmarks.map(b => b.ticker)])].filter(Boolean);
 
-        const { isMarketOpen, prices, allSymbols } = await fetchAllData(tickers);
+        const { isMarketOpen, prices, allSymbols } = await fetchAllData(tickers, API_KEY);
 
         const historicalTickers = sheetData.records.map(r => r.ticker);
         const uniqueTickers = [...new Set([...tickers, ...historicalTickers])].filter(Boolean);
@@ -109,7 +103,6 @@ const handler = async (event) => {
 
         const payload = { sheetData, prices, isMarketOpen, stockNames };
         
-        // Cache for 15 minutes (900 seconds)
         await redis.set('STOCK_DASHBOARD_DATA', payload, { ex: 900 });
 
         console.log("Sync complete.");

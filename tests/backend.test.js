@@ -10,7 +10,6 @@ describe('Backend Function: fetch-data', () => {
     });
 
     test('Successfully serves cached data from Redis', async (t) => {
-        // Mock Data that simulates what is stored in Redis
         const mockRedisData = {
             sheetData: {
                 contestants: [{ useruuid: 'u1', ticker: 'AAPL' }],
@@ -26,7 +25,6 @@ describe('Backend Function: fetch-data', () => {
             stockNames: { 'AAPL': 'Apple Inc' }
         };
 
-        // Mock global.fetch to intercept Upstash Redis calls
         const originalFetch = global.fetch;
         global.fetch = async (url) => {
             const isPipeline = url && url.includes('/pipeline');
@@ -48,11 +46,9 @@ describe('Backend Function: fetch-data', () => {
         };
 
         try {
-            // Execute Handler
             const res = await handler();
             const body = JSON.parse(res.body);
 
-            // Assertions
             assert.strictEqual(res.statusCode, 200, `Status should be 200. Error: ${body.error}`);
             assert.ok(body.prices, 'Prices array should exist');
             assert.ok(Array.isArray(body.prices), 'Prices should be an array');

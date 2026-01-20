@@ -12,7 +12,6 @@ exports.handler = async () => {
         const data = await redis.get('STOCK_DASHBOARD_DATA');
 
         if (!data) {
-            // Return empty structure if cache is cold to prevent frontend crash
             return { 
                 statusCode: 200, 
                 headers: HEADERS, 

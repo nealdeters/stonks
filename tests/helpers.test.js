@@ -11,7 +11,6 @@ describe('Date Utility Logic', () => {
     });
 
     test('Registration is closed if today is exactly the cutoff', () => {
-        // Technically "equal to" depends on your preference, usually > is better
         const today = '2026-02-01T12:00:00';
         const cutoff = '2026-02-01T00:00:00';
         assert.strictEqual(isRegistrationClosed(today, cutoff), true);
@@ -38,7 +37,6 @@ describe('Date Utility Logic', () => {
         });
 
         test('should handle manual string input if constant is not used', () => {
-            // This ensures the function isn't strictly tied to the object
             const result = getRange('CustomSheet', 'A1:B10');
             assert.strictEqual(result, 'CustomSheet!A1:B10');
         });

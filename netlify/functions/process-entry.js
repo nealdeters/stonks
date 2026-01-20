@@ -10,11 +10,13 @@ const INVESTMENT = 5000;
 exports.handler = async (event) => {
     let formData;
     try {
-        formData = event.isBase64Encoded 
-            ? Object.fromEntries(new URLSearchParams(Buffer.from(event.body, 'base64').toString()))
-            : JSON.parse(event.body);
+        if (event.isBase64Encoded) {
+            formData = Object.fromEntries(new URLSearchParams(Buffer.from(event.body, 'base64').toString()));
+        } else {
+            formData = JSON.parse(event.body);
+        }
     } catch (e) {
-        formData = Object.fromEntries(new URLSearchParams(event.body));
+         formData = Object.fromEntries(new URLSearchParams(event.body));
     }
 
     const { name, email, ticker, secret } = formData;

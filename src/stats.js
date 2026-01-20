@@ -27,7 +27,6 @@ const initStats = async () => {
         const response = await fetch(`/.netlify/functions/fetch-data`);
         const data = await response.json();
         
-        // Use the same mapping logic as Winners (Object-based)
         const records = data.sheetData?.records || data.records;
         const controls = data.sheetData?.controls || data.controls;
         const prices = data.prices || [];
@@ -51,7 +50,6 @@ const initStats = async () => {
             return;
         }
 
-        // Filter records for this specific UUID
         const userHistory = records
             .filter(row => row.user_uuid === targetUuid)
             .sort((a, b) => parseInt(b.year) - parseInt(a.year));
@@ -73,7 +71,6 @@ const initStats = async () => {
             return;
         }
 
-        // 1. Dynamic Title: "${name} Stats"
         const userName = userHistory[0].name || "Participant";
         document.getElementById('user-name-title').innerText = `${userName} Stats`;
         document.title = `${userName} - Performance Stats`;
@@ -86,16 +83,13 @@ const initStats = async () => {
         const returns = userHistory.map(row => parseFloat(row.percent_gain) || 0);
         const avgReturn = returns.reduce((a, b) => a + b, 0) / totalSeasons;
 
-        // 2. Inject Summary Stats
         document.getElementById('stat-seasons').innerText = totalSeasons;
         document.getElementById('stat-avg-return').innerText = `${avgReturn.toFixed(2)}%`;
 
-        // Inject Medal Counts
         document.getElementById('stat-gold').innerText = goldCount;
         document.getElementById('stat-silver').innerText = silverCount;
         document.getElementById('stat-bronze').innerText = bronzeCount;
 
-        // 4. Render Table Rows
         container.innerHTML = userHistory.map(row => {
             const isWin = parseInt(row.place) === 1;
             const placeEmoji = isWin ? '🥇' : parseInt(row.place) === 2 ? '🥈' : parseInt(row.place) === 3 ? '🥉' : '';
@@ -145,19 +139,16 @@ const initStats = async () => {
 
 document.addEventListener('DOMContentLoaded', initStats);
 
-// Check if we are in a browser and NOT in a test environment
 const isTest = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
 
 if (typeof window !== 'undefined' && !isTest) {
     document.addEventListener('DOMContentLoaded', initStats);
 }
 
-// Export for Node/Testing
 if (typeof module !== 'undefined') {
     module.exports = { initStats };
 }
 
-// Tailwind Safelist for Stats
 const _safelist = `
     hover:bg-emerald-500/5 text-emerald-400
     hover:bg-orange-500/5 text-orange-400

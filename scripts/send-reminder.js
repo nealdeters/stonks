@@ -19,7 +19,6 @@ async function run() {
     const resend = new Resend(apiKey);
 
     try {
-        // 1. Get Controls (Title, Cutoff, Payment URL)
         const controlsRes = await sheets.spreadsheets.values.get({ 
             spreadsheetId: sheetId, range: getRange(SHEETS.CONTROLS) 
         });
@@ -36,7 +35,6 @@ async function run() {
         const ranges = [getRange(SHEETS.USERS), getRange(SHEETS.CONTESTANTS)]
         let recipients = [];
 
-        // 2. Handle Manual Override vs. Smart List
         if (manualToArg) {
             recipients = manualToArg.split('=')[1].split(',').map(e => e.trim());
         } else {
@@ -51,12 +49,10 @@ async function run() {
             const userHeaders = allUsers[0].map(h => h.toLowerCase().trim());
             const emailIdx = userHeaders.indexOf('email');
 
-            // Get emails of people who already registered this year
             const registeredEmails = new Set(
-                currentContestants.slice(1).map(row => row[2]?.toLowerCase()) // Assuming col C is email
+                currentContestants.slice(1).map(row => row[2]?.toLowerCase())
             );
 
-            // Filter Users to only those NOT in Contestants
             recipients = allUsers.slice(1)
                 .map(row => row[emailIdx])
                 .filter(email => email && !registeredEmails.has(email.toLowerCase()));
@@ -70,7 +66,6 @@ async function run() {
         const title = controls.title || 'Schultz Cup';
         const currentYear = new Date().getFullYear();
         
-        // 3. Send Email
         await resend.emails.send({
             from: `${title} <onboarding@resend.dev>`,
             to: recipients,
@@ -97,4 +92,4 @@ async function run() {
 if (require.main === module) {
     run();
 }
-module.exports = { run }; // Export for testing
+module.exports = { run };

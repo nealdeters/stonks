@@ -99,6 +99,4 @@ describe('Stonks UI Tests', { timeout: 60000 }, () => {
         const buttonText = await page.$eval('#payment-btn', el => el.innerText.trim().toUpperCase());
         assert.strictEqual(buttonText, 'PAY ENTRY FEE');
     });
-
-    // test proving payment entry fee button directs where needed
 });

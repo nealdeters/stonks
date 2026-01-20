@@ -1,14 +1,13 @@
 const initSubmit = () => {
     applyGlobalTheme();
 
-    // Fetch data to update title if custom controls exist
     fetch("/.netlify/functions/fetch-data")
         .then(response => response.json())
         .then(data => {
             const controls = data.sheetData?.controls || data.controls;
             if (controls?.title) updateSiteTitle(controls.title);
         })
-        .catch(() => {}); // Silent fail is fine here
+        .catch(() => {});
 
     const entryForm = document.getElementById('entryForm');
     if (entryForm) {
@@ -18,7 +17,6 @@ const initSubmit = () => {
             const errEl = document.getElementById('error-message');
             const formData = new FormData(e.target);
             
-            // Sanitize inputs to prevent Formula Injection
             for (const [key, value] of Array.from(formData.entries())) {
                 if (typeof value === 'string' && /^[=+\-@]/.test(value)) {
                     formData.set(key, `'${value}`);
@@ -56,7 +54,6 @@ const initSubmit = () => {
 
 document.addEventListener('DOMContentLoaded', initSubmit);
 
-// Tailwind Safelist for Submit Page
 const _safelist = `
     bg-emerald-950/30 border-emerald-500/30 border-emerald-500/40 
     shadow-emerald-500/30 hover:border-emerald-500/50 hover:bg-emerald-500/5

@@ -5,11 +5,9 @@ const initWinners = async () => {
         const response = await fetch(`/.netlify/functions/fetch-data`);
         const data = await response.json();
         
-        // Accessing the winners array
         const winners = data.sheetData?.winners || data.winners;
         const controls = data.sheetData?.controls || data.controls;
 
-        // Update Header & Title
         if (controls?.title) {
             updateSiteTitle(controls.title);
         }
@@ -17,15 +15,12 @@ const initWinners = async () => {
         const container = document.getElementById('winners-body');
         if (!container) return;
 
-        // Ensure winners exists and has data
         if (!winners || winners.length === 0) {
             container.innerHTML = `<div class="p-20 text-center text-slate-500 font-black uppercase tracking-widest">History in the making...</div>`;
             return;
         }
 
-        // Map the Objects to HTML
         container.innerHTML = winners.map(winnerRow => {
-            // Accessing object properties directly
             const year = winnerRow.year || "N/A";
             
             return `
@@ -70,7 +65,6 @@ function renderWinnerSlot(name, uuid, rank, color, emoji, themeColor = 'indigo')
 
 document.addEventListener('DOMContentLoaded', initWinners);
 
-// Tailwind Safelist for Winners
 const _safelist = `
     border-emerald-500/10 hover:bg-emerald-500/5 bg-emerald-500/5 
     border-emerald-500/5 bg-emerald-950/40 border-emerald-500/20
