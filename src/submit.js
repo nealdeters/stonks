@@ -1,13 +1,21 @@
-const initSubmit = () => {
+const initSubmit = async () => {
     applyGlobalTheme();
 
-    fetch("/.netlify/functions/fetch-data")
-        .then(response => response.json())
-        .then(data => {
-            const controls = data.sheetData?.controls || data.controls;
-            if (controls?.title) updateSiteTitle(controls.title);
-        })
-        .catch(() => {});
+    try {
+        const response = await fetch("/.netlify/functions/fetch-data");
+        const data = await response.json();
+
+        const controls = data.sheetData?.controls || data.controls;
+        const prices = data.prices || [];
+
+        if (typeof initTicker === 'function') {
+            initTicker(prices);
+        }
+
+        if (controls?.title) updateSiteTitle(controls.title);
+    } catch (err) {
+        console.error("Error loading submit page data:", err);
+    }
 
     const entryForm = document.getElementById('entryForm');
     if (entryForm) {

@@ -91,6 +91,7 @@ const initApp = async () => {
         }
 
         updateBenchmarks(prices);
+        initTicker(prices, contestants);
 
         const controls = sheetData.controls;
         if (controls) {
