@@ -1,4 +1,4 @@
-# 📈 Stonks 2026
+# 📈 Stonks
 
 A high-performance, mobile-responsive leaderboard and automated management system for an annual stock-picking contest. This application uses a serverless architecture to provide real-time performance tracking and automated end-of-contest transitions.
 
@@ -6,7 +6,7 @@ A high-performance, mobile-responsive leaderboard and automated management syste
 
 ## 🚀 Key Features
 
-* **Automated Season Reset:** A GitHub Actions-driven finalization engine that snapshots final standings, archives them to a "Records" hall of fame, and resets the board for the next contest.
+* **Automated Contest Reset:** A GitHub Actions-driven finalization engine that snapshots final standings, archives them to a "Records" hall of fame, and resets the board for the next contest.
 * **Dual-Source Data Engine:** Seamless integration with Google Sheets for live, no-code updates, with calculated fallbacks for offline stability.
 * **Smart Ranking & Prize Logic:** Dynamic calculation of gains, losses, and rankings using real-time Finnhub price data. Includes automated badge assignment for 1st, 2nd, 3rd, and the "Last Place" consolation.
 * **Career Analytics:** Deep-link participant profiles that aggregate historical performance data from the Records tab to calculate career "Medal Counts" and average returns.
@@ -27,7 +27,7 @@ A high-performance, mobile-responsive leaderboard and automated management syste
 │   └── functions/
 │       └── fetch-data.js    # Secure API proxy & Finnhub cache
 ├── scripts/
-│   └── finalize.js          # Season reset & archiving logic
+│   └── finalize.js          # Contest reset & archiving logic
 ├── src/
 │   ├── utils/
 │   │   └── helpers.js       # Shared date, parsing, and range logic
@@ -72,6 +72,10 @@ To ensure stability on Ubuntu-based GitHub Runners, the test suite utilizes a ce
 * **SHEET_ID:** The ID from your Google Sheet URL.
 * **GOOGLE_SERVICE_ACCOUNT_EMAIL:** The email of your GCP Service Account.
 * **GOOGLE_PRIVATE_KEY:** The RSA private key for Sheets API access.
+* **UPSTASH_REDIS_REST_URL:** The redis url for your redis cluster.
+* **UPSTASH_REDIS_REST_TOKEN:** The redis private token for your redis cluster.
+* **APP_SECRET:** The application secret to allow contestant entries.
+* **RESEND_API_KEY:** The api key for email notifications.
 
 ### 2. Local Development
 Run \`netlify dev\` to test the full stack, including functions and environment variables.
