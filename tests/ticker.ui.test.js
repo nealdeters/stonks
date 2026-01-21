@@ -17,6 +17,9 @@ describe('Ticker UI Component', () => {
 
     beforeEach(async () => {
         page = await browser.newPage();
+        await page.evaluateOnNewDocument(() => {
+            window.isContestEntryOpen = () => true;
+        });
         await page.setRequestInterception(true);
     });
 
@@ -38,7 +41,8 @@ describe('Ticker UI Component', () => {
                         },
                         prices: [
                             { ticker: "AAPL", price: 150, dp: 1.5 }
-                        ]
+                        ],
+                        isMarketOpen: true
                     })
                 });
             } else {

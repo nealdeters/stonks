@@ -45,7 +45,11 @@ describe('Registration Logic: process-entry', () => {
                 }
             }
         }));
-        t.mock.method(axios, 'get', async () => ({ data: { c: 150 } }));
+        t.mock.method(axios, 'get', async (url) => {
+            if (url.includes('market-status')) return { data: { isOpen: true } };
+            if (url.includes('quote')) return { data: { c: 150 } };
+            return { data: {} };
+        });
 
         const res = await handler({
             body: JSON.stringify({ name: 'Neal', email: 'neal@test.com', ticker: 'AAPL', secret: 'GO' })
@@ -64,6 +68,11 @@ describe('Registration Logic: process-entry', () => {
                 }
             }
         }));
+        
+        t.mock.method(axios, 'get', async (url) => {
+            if (url.includes('market-status')) return { data: { isOpen: true } };
+            return { data: {} };
+        });
 
         const res = await handler({
             body: JSON.stringify({ name: 'Neal', email: 'neal@test.com', ticker: 'AAPL', secret: 'GO' })

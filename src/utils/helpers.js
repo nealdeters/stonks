@@ -12,6 +12,14 @@ function isRegistrationClosed(currentTime, cutoffDate) {
     return now > cutoff;
 }
 
+function isContestEntryOpen(currentTime) {
+    const now = new Date(currentTime);
+    const currentYear = now.getFullYear();
+    const startGate = new Date(currentYear, 0, 2);
+    startGate.setHours(0, 0, 0, 0);
+    return now >= startGate;
+}
+
 function parseRows (valueSet) {
     if (!valueSet?.values) return [];
     const [headers, ...rows] = valueSet.values;
@@ -30,4 +38,14 @@ const SHEETS = {
 
 function getRange(sheetName, columns = 'A:Z') { return `${sheetName}!${columns}` };
 
-module.exports = { SHEETS, isContestOver, isRegistrationClosed, parseRows, getRange };
+if (typeof module !== 'undefined') {
+    module.exports = { SHEETS, isContestOver, isRegistrationClosed, isContestEntryOpen, parseRows, getRange };
+}
+if (typeof window !== 'undefined') {
+    window.SHEETS = SHEETS;
+    window.isContestOver = isContestOver;
+    window.isRegistrationClosed = isRegistrationClosed;
+    window.isContestEntryOpen = isContestEntryOpen;
+    window.parseRows = parseRows;
+    window.getRange = getRange;
+}
