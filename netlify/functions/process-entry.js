@@ -74,11 +74,6 @@ exports.handler = async (event) => {
             return { statusCode: 422, headers: HEADERS, body: JSON.stringify({ error: "Contest does not open until Jan 2nd." }) };
         }
 
-        const marketStatus = await axios.get(`https://finnhub.io/api/v1/stock/market-status?exchange=US&token=${process.env.FINNHUB_KEY}`);
-        if (!marketStatus.data.isOpen) {
-            return { statusCode: 422, headers: HEADERS, body: JSON.stringify({ error: "Entries are only accepted when the US Market is open." }) };
-        }
-
         if (isRegistrationClosed(new Date(), controls.cutoff)) {
             return { statusCode: 422, headers: HEADERS, body: JSON.stringify({ error: `Registration closed.` }) };
         }
@@ -127,9 +122,17 @@ exports.handler = async (event) => {
 
         const quote = await axios.get(`https://finnhub.io/api/v1/quote?symbol=${ticker.toUpperCase()}&token=${process.env.FINNHUB_KEY}`);
         const price = quote.data.c;
+        const timestamp = quote.data.t;
 
         if (!price || price === 0) {
             return { statusCode: 422, headers: HEADERS, body: JSON.stringify({ error: `Ticker "${ticker}" not found or has no price.` }) };
+        }
+
+        const currentYear = new Date().getFullYear();
+        const quoteYear = new Date(timestamp * 1000).getFullYear();
+
+        if (quoteYear < currentYear) {
+             return { statusCode: 422, headers: HEADERS, body: JSON.stringify({ error: "Price is from previous year. Please wait for market open." }) };
         }
 
         const shares = INVESTMENT / price;
