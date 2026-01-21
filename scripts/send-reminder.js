@@ -77,7 +77,7 @@ async function run() {
                     <h2 style="color: #a78bfa;">The ${title} is back!</h2>
                     <p>We noticed you haven't submitted your entry for this year's contest yet.</p>
                     <p><strong>Registration Cutoff:</strong> ${controls.cutoff}</p>
-                    <p><strong>Access Code:</strong> ${APP_SECRET}</p>
+                    <p><strong>Access Secret:</strong> ${APP_SECRET}</p>
                     <div style="margin: 30px 0;">
                         <a href="${process.env.SITE_URL}" style="background: #a78bfa; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Enter Now</a>
                     </div>
