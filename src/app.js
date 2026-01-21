@@ -17,7 +17,7 @@ const initApp = async () => {
     if (container && container.children.length === 0) {
         container.innerHTML = `
             <tr class="block md:table-row w-full animate-pulse">
-                <td colspan="5" class="block md:table-cell w-full p-8 text-center">
+                <td colspan="6" class="block md:table-cell w-full p-8 text-center">
                     <div class="flex flex-col items-center justify-center p-12 rounded-[2.5rem] bg-${themeColor}-950/20 border border-${themeColor}-500/10">
                         <div class="text-5xl mb-4 opacity-50 grayscale">⏳</div>
                         <h3 class="text-lg font-black text-white uppercase tracking-widest mb-2">Syncing Data</h3>
@@ -132,7 +132,7 @@ const initApp = async () => {
         if (container) {
             container.innerHTML = `
                 <tr class="block md:table-row w-full">
-                    <td colspan="5" class="block md:table-cell w-full p-8 text-center">
+                    <td colspan="6" class="block md:table-cell w-full p-8 text-center">
                         <div class="flex flex-col items-center justify-center p-12 rounded-[2.5rem] bg-red-950/20 border border-red-500/10">
                             <div class="text-5xl mb-4 opacity-50 grayscale">⚠️</div>
                             <h3 class="text-lg font-black text-white uppercase tracking-widest mb-2">System Error</h3>
@@ -179,9 +179,10 @@ function renderLeaderboard(results, sheetData) {
     container.innerHTML = results.map((res, index) => {
         return `
         <tr class="block md:table-row hover:bg-${themeColor}-500/10 transition-all border-b border-${themeColor}-500/20 md:border-none">
+            <td class="hidden md:table-cell px-8 py-4 font-mono font-bold text-${themeColor}-400">#${index + 1}</td>
             <td class="px-8 py-4 block md:table-cell">
                 <div class="flex items-center gap-4">
-                    <span class="text-xs font-mono text-${themeColor}-400 font-bold w-6">#${index + 1}</span>
+                    <span class="md:hidden text-xs font-mono text-${themeColor}-400 font-bold w-6">#${index + 1}</span>
                     <div class="flex flex-col gap-1.5">
                         <div class="flex items-center gap-2">
                             <a href="/stats?uuid=${res.user_uuid}" class="text-white font-black hover:text-cyan-400 transition-all cursor-pointer group flex items-center gap-2">

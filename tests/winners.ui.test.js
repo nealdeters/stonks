@@ -29,6 +29,10 @@ describe('Winners UI Integration', () => {
                     body: JSON.stringify({
                         sheetData: {
                             controls: { title: "Test Championship" },
+                            records: [
+                                { year: "2025", percent_gain: "10.0", ticker: "AAPL" },
+                                { year: "2025", percent_gain: "20.0", ticker: "GOOG" }
+                            ],
                             winners: [
                                 {
                                     year: "2025",
@@ -60,6 +64,14 @@ describe('Winners UI Integration', () => {
 
         const link = await page.$eval('a[href*="uuid-123"]', el => el.href);
         assert.ok(link.includes('/stats?uuid=uuid-123'), "Link should contain correct UUID");
+
+        // Verify Stats
+        const avgReturn = await page.$eval('#stat-avg-return', el => el.innerText);
+        assert.strictEqual(avgReturn, '+15.00%', "Should calculate correct average (10+20)/2");
+
+        // Verify Year Link
+        const yearLink = await page.$eval('a[href*="history.html?year=2025"]', el => el.href);
+        assert.ok(yearLink, "Year should be linked to history page");
     });
 
     test('displays "History in the making" when winners list is empty', async () => {

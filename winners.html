@@ -31,6 +31,22 @@
     </header>
 
     <main class="max-w-7xl mx-auto px-4 md:px-8 pt-12">
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+            <div class="bg-indigo-950/40 border border-indigo-500/20 p-6 rounded-[2rem] shadow-xl">
+                <p class="text-[10px] text-indigo-300/70 uppercase font-black tracking-widest mb-1">Total Contests</p>
+                <p id="stat-seasons" class="text-2xl font-black text-white">0</p>
+            </div>
+            <div class="bg-indigo-950/40 border border-indigo-500/20 p-6 rounded-[2rem] shadow-xl">
+                <p class="text-[10px] text-indigo-300/70 uppercase font-black tracking-widest mb-1">Avg. Contest Return</p>
+                <p id="stat-avg-return" class="text-2xl font-black text-white">0.00%</p>
+            </div>
+            <div class="bg-indigo-950/40 border border-indigo-500/20 p-6 rounded-[2rem] shadow-xl">
+                <p class="text-[10px] text-indigo-300/70 uppercase font-black tracking-widest mb-1">Best Year</p>
+                <p id="stat-best-year" class="text-2xl font-black text-white">-</p>
+            </div>
+        </div>
+
         <div class="leaderboard-card-container bg-indigo-950/10 border border-indigo-500/10 shadow-2xl mb-12 overflow-hidden">
             <div id="winners-body" class="divide-y divide-indigo-500/10">
                 <div class="p-20 text-center text-indigo-300/30 font-black uppercase tracking-widest">

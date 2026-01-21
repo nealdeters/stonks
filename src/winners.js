@@ -8,6 +8,7 @@ const initWinners = async () => {
         const winners = data.sheetData?.winners || data.winners;
         const controls = data.sheetData?.controls || data.controls;
         const contestants = data.sheetData?.contestants || [];
+        const records = data.sheetData?.records || [];
 
         initTicker(data.prices || [], contestants);
 
@@ -23,14 +24,62 @@ const initWinners = async () => {
             return;
         }
 
+        // Calculate Stats
+        const yearsData = {};
+        records.forEach(r => {
+            const year = r.year;
+            const val = parseFloat(String(r.percent_gain ||  0).replace(/[%+]/g, ''));
+            
+            // Filter out market benchmarks
+            const isMarket = ['SPY', 'VOO', 'IVV', '^GSPC'].includes(r.ticker?.toUpperCase()) || 
+                           ['S&P 500', 'MARKET', 'BENCHMARK'].includes(r.name?.toUpperCase());
+            
+            if (!yearsData[year]) yearsData[year] = { sum: 0, count: 0 };
+            
+            if (!isMarket) {
+                yearsData[year].sum += val;
+                yearsData[year].count++;
+            }
+        });
+
+        let totalAvgSum = 0;
+        let bestYear = { year: '-', return: -Infinity };
+        const yearsList = Object.keys(yearsData);
+        const yearlyAverages = {};
+
+        yearsList.forEach(y => {
+            const avg = yearsData[y].count ? yearsData[y].sum / yearsData[y].count : 0;
+            yearlyAverages[y] = avg;
+            totalAvgSum += avg;
+            if (avg > bestYear.return) bestYear = { year: y, return: avg };
+        });
+
+        const globalAvg = yearsList.length ? totalAvgSum / yearsList.length : 0;
+
+        const seasonEl = document.getElementById('stat-seasons');
+        if (seasonEl) seasonEl.textContent = yearsList.length;
+
+        const avgEl = document.getElementById('stat-avg-return');
+        if (avgEl) {
+            avgEl.textContent = (globalAvg > 0 ? '+' : '') + globalAvg.toFixed(2) + '%';
+            avgEl.className = `text-2xl font-black ${globalAvg > 0 ? 'text-emerald-400' : (globalAvg < 0 ? 'text-red-400' : 'text-white')}`;
+        }
+        
+        const bestYearEl = document.getElementById('stat-best-year');
+        if (bestYearEl && bestYear.year !== '-') {
+            bestYearEl.textContent = `${bestYear.year} (${bestYear.return.toFixed(1)}%)`;
+        }
+
         container.innerHTML = winners.map(winnerRow => {
             const year = winnerRow.year || "N/A";
+            const groupAvg = yearlyAverages[year] || 0;
             
             return `
             <div class="p-8 border-b border-${themeColor}-500/10 last:border-0 hover:bg-${themeColor}-500/5 transition-all">
                 <div class="flex flex-col md:flex-row md:items-center gap-8">
-                    <div class="shrink-0">
-                        <span class="text-5xl font-black text-white italic tracking-tighter opacity-80">${year}</span>
+                    <div class="shrink-0 flex flex-col items-center gap-2 w-32">
+                        <a href="/history.html?year=${year}" class="text-5xl font-black text-white italic tracking-tighter opacity-80 hover:text-${themeColor}-400 transition-colors underline decoration-${themeColor}-500/30 underline-offset-8">${year}</a>
+                        <span class="text-xs font-bold ${groupAvg >= 0 ? 'text-emerald-400' : 'text-red-400'} bg-${themeColor}-950/40 px-3 py-1 rounded-full border border-${themeColor}-500/20">${groupAvg > 0 ? '+' : ''}${groupAvg.toFixed(2)}% Avg</span>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
