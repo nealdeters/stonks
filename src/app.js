@@ -41,7 +41,7 @@ const initApp = async () => {
 
         const now = new Date();
         const seasonOpen = isContestEntryOpen(now);
-        const canJoin = seasonOpen && isMarketOpen;
+        const canJoin = seasonOpen;
 
         if (sheetData.controls?.title) {
             updateSiteTitle(sheetData.controls.title);
@@ -112,7 +112,6 @@ const initApp = async () => {
                     addBtn.classList.add('opacity-50', 'cursor-not-allowed');
                     addBtn.onclick = null;
                     if (!seasonOpen) addBtn.innerText = "Season Starts Jan 2nd";
-                    else if (!isMarketOpen) addBtn.innerText = "Market Closed";
                 }
 
                 if (controls.cutoff) {
@@ -152,7 +151,6 @@ function renderEmptyState(canJoin, isContestEntryOpen, isMarketOpen) {
     } else {
         let msg = "Registration Opens Soon";
         if (!isContestEntryOpen) msg = "Season Starts Jan 2nd";
-        else if (!isMarketOpen) msg = "Market Closed";
         btnHtml = `<button disabled class="bg-slate-700 px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] opacity-50 cursor-not-allowed">${msg}</button>`;
     }
 
@@ -249,7 +247,10 @@ function updateBenchmarks(livePrices) {
                     <div class="${isPos ? 'bg-emerald-500/20' : 'bg-red-500/20'} p-2.5 rounded-xl text-xs font-black">${ticker}</div>
                     <div>
                         <p class="text-[9px] text-${themeColor}-300/70 uppercase font-black tracking-widest">${config[ticker].name}</p>
-                        <p class="text-sm font-bold ${isPos ? 'text-emerald-400' : 'text-red-400'}">${isPos ? '+' : ''}${pct.toFixed(2)}%</p>
+                        <div class="flex items-baseline gap-1">
+                            <p class="text-sm font-bold ${isPos ? 'text-emerald-400' : 'text-red-400'}">${isPos ? '+' : ''}${pct.toFixed(2)}%</p>
+                            <span class="text-[8px] text-${themeColor}-300/50 font-bold uppercase">YTD</span>
+                        </div>
                     </div>
                 </div>`;
         }
