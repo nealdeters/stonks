@@ -31,6 +31,22 @@
     </header>
 
     <main class="max-w-7xl mx-auto px-4 md:px-8 pt-12">
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+            <div class="bg-indigo-950/40 border border-indigo-500/20 p-6 rounded-[2rem] shadow-xl">
+                <p class="text-[10px] text-indigo-300/70 uppercase font-black tracking-widest mb-1">Total Contests</p>
+                <p id="stat-seasons" class="text-2xl font-black text-white">0</p>
+            </div>
+            <div class="bg-indigo-950/40 border border-indigo-500/20 p-6 rounded-[2rem] shadow-xl">
+                <p class="text-[10px] text-indigo-300/70 uppercase font-black tracking-widest mb-1">Avg. Contest Return</p>
+                <p id="stat-avg-return" class="text-2xl font-black text-white">0.00%</p>
+            </div>
+            <div class="bg-indigo-950/40 border border-indigo-500/20 p-6 rounded-[2rem] shadow-xl">
+                <p class="text-[10px] text-indigo-300/70 uppercase font-black tracking-widest mb-1">Best Year</p>
+                <p id="stat-best-year" class="text-2xl font-black text-white">-</p>
+            </div>
+        </div>
+
         <div class="leaderboard-card-container bg-indigo-950/10 border border-indigo-500/10 shadow-2xl mb-12 overflow-hidden">
             <div id="winners-body" class="divide-y divide-indigo-500/10">
                 <div class="p-20 text-center text-indigo-300/30 font-black uppercase tracking-widest">
@@ -42,12 +58,26 @@
 
     <footer>
         <div class="max-w-7xl mx-auto px-4 md:px-8 py-4 md:py-6"> 
-            <div class="flex justify-end items-center">
-                <a href="/performers" class="group flex items-center gap-3 px-5 py-2 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <a href="/winners" class="w-full md:w-auto group flex items-center gap-3 px-5 py-2 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 hover:border-amber-500/50 hover:bg-amber-500/5 transition-all">
+                    <span class="text-xl group-hover:scale-110 transition-transform">🏆</span>
+                    <div class="text-left">
+                        <p class="text-[9px] font-black uppercase tracking-widest text-indigo-400 group-hover:text-amber-400">The Archives</p>
+                        <p class="text-xs font-bold text-white uppercase">Hall of Fame</p>
+                    </div>
+                </a>
+                <a href="/performers" class="w-full md:w-auto group flex items-center gap-3 px-5 py-2 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all">
                     <span class="text-xl group-hover:scale-110 transition-transform">📈</span>
                     <div class="text-left">
                         <p class="text-[9px] font-black uppercase tracking-widest text-indigo-400 group-hover:text-cyan-400">Top Performers</p>
                         <p class="text-xs font-bold text-white uppercase">Career Stats</p>
+                    </div>
+                </a>
+                <a href="/news.html" class="w-full md:w-auto group flex items-center gap-3 px-5 py-2 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all">
+                    <span class="text-xl group-hover:scale-110 transition-transform">📰</span>
+                    <div class="text-left">
+                        <p class="text-[9px] font-black uppercase tracking-widest text-indigo-400 group-hover:text-emerald-400">Latest Updates</p>
+                        <p class="text-xs font-bold text-white uppercase">Market News</p>
                     </div>
                 </a>
             </div>

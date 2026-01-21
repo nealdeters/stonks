@@ -1,7 +1,6 @@
 const initTicker = (prices) => {
     if (!prices || prices.length === 0) return;
 
-    // 1. Inject CSS Styles if not present
     if (!document.getElementById('ticker-style')) {
         const style = document.createElement('style');
         style.id = 'ticker-style';
@@ -34,7 +33,6 @@ const initTicker = (prices) => {
         document.head.appendChild(style);
     }
 
-    // 2. Inject HTML Container if not present
     let container = document.getElementById('stock-ticker-container');
     if (!container) {
         container = document.createElement('div');
@@ -62,7 +60,6 @@ const initTicker = (prices) => {
         }
     }
 
-    // 3. Render Ticker Items (Repeated 4x to ensure full width coverage)
     const displayItems = [...prices, ...prices, ...prices, ...prices];
     
     const inner = document.getElementById('stock-ticker-inner');
