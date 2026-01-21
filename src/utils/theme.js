@@ -101,12 +101,9 @@ const applyGlobalTheme = () => {
 const updateSiteTitle = (title) => {
     if (!title || typeof document === 'undefined') return;
 
-    // Update Header Title
     const headerTitle = document.querySelector('header h1');
     if (headerTitle) headerTitle.innerText = title;
 
-    // Update Document Title (Browser Tab)
-    // If title has a suffix (e.g. " - Hall of Fame"), preserve it.
     if (document.title.includes(' - ')) {
         const parts = document.title.split(' - ');
         parts[0] = title;
