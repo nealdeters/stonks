@@ -39,6 +39,10 @@ const initApp = async () => {
         
         updateMarketStatus({ isMarketOpen, holidayName });
 
+        const now = new Date();
+        const seasonOpen = isContestEntryOpen(now);
+        const canJoin = seasonOpen && isMarketOpen;
+
         if (sheetData.controls?.title) {
             updateSiteTitle(sheetData.controls.title);
         }
@@ -64,7 +68,7 @@ const initApp = async () => {
         const contestants = sheetData.contestants || [];
         
         if (contestants.length === 0 || (contestants.length === 1 && !contestants[0].ticker)) {
-            renderEmptyState();
+            renderEmptyState(canJoin, seasonOpen, isMarketOpen);
             updateStats([]);
             updateTopMover([]);
         } else {
@@ -101,16 +105,24 @@ const initApp = async () => {
                 window.payment_url = controls.payment_url;
             }
 
-            if (controls.cutoff) {
-                const now = new Date();
-                const regCutoff = new Date(controls.cutoff);
-                const addBtn = document.getElementById('add-participant-btn');
-
-                if (now > regCutoff && addBtn) {
+            const addBtn = document.getElementById('add-participant-btn');
+            if (addBtn) {
+                if (!canJoin) {
                     addBtn.disabled = true;
-                    addBtn.innerText = "Registration Closed";
                     addBtn.classList.add('opacity-50', 'cursor-not-allowed');
                     addBtn.onclick = null;
+                    if (!seasonOpen) addBtn.innerText = "Season Starts Jan 2nd";
+                    else if (!isMarketOpen) addBtn.innerText = "Market Closed";
+                }
+
+                if (controls.cutoff) {
+                    const regCutoff = new Date(controls.cutoff);
+                    if (now > regCutoff) {
+                        addBtn.disabled = true;
+                        addBtn.innerText = "Registration Closed";
+                        addBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                        addBtn.onclick = null;
+                    }
                 }
             }
         }
@@ -133,7 +145,17 @@ const initApp = async () => {
     }
 };
 
-function renderEmptyState() {
+function renderEmptyState(canJoin, isContestEntryOpen, isMarketOpen) {
+    let btnHtml;
+    if (canJoin) {
+        btnHtml = `<button onclick="openEntryForm()" class="bg-gradient-to-r from-violet-500 to-${themeColor}-500 px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all">Be the first to join</button>`;
+    } else {
+        let msg = "Registration Opens Soon";
+        if (!isContestEntryOpen) msg = "Season Starts Jan 2nd";
+        else if (!isMarketOpen) msg = "Market Closed";
+        btnHtml = `<button disabled class="bg-slate-700 px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] opacity-50 cursor-not-allowed">${msg}</button>`;
+    }
+
     const container = document.getElementById('dashboard-content');
     container.innerHTML = `
         <div class="bg-${themeColor}-950/20 border border-${themeColor}-500/20 rounded-[40px] p-12 text-center my-8">
@@ -144,9 +166,7 @@ function renderEmptyState() {
                 Check the Hall of Fame for past winners while we prepare for the next round!
             </p>
             <div class="flex justify-center gap-4">
-                <button onclick="openEntryForm()" class="bg-gradient-to-r from-violet-500 to-${themeColor}-500 px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all">
-                    Be the first to join
-                </button>
+                ${btnHtml}
             </div>
         </div>
     `;

@@ -13,6 +13,9 @@ describe('Stonks UI Tests', { timeout: 60000 }, () => {
 
     beforeEach(async () => {
         page = await browser.newPage();
+        await page.evaluateOnNewDocument(() => {
+            window.isContestEntryOpen = () => true;
+        });
         await page.setRequestInterception(true);
         page.on('request', async (req) => {
             const url = req.url();
@@ -33,7 +36,8 @@ describe('Stonks UI Tests', { timeout: 60000 }, () => {
                         { ticker: 'AAPL', price: 110.00, dp: 2.5, name: 'Apple' },
                         { ticker: 'TSLA', price: 190.00, dp: -1.2, name: 'Tesla' },
                         { ticker: 'VOO', price: 510.00, dp: 0.5, name: 'Vanguard S&P 500' }
-                    ]
+                    ],
+                    isMarketOpen: true
                 };
 
                 return req.respond({

@@ -1,0 +1,40 @@
+name: Update Benchmarks
+
+on:
+  schedule:
+    - cron: '0 21 * * *' # Runs at 21:00 UTC daily (Market Close)
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force update regardless of date'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  update-benchmarks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install Dependencies
+        run: npm install
+        
+      - name: Run Update Script
+        env:
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          FINNHUB_KEY: ${{ secrets.FINNHUB_KEY }}
+          GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}
+          GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
+        run: |
+          if [ "${{ inputs.force }}" == "true" ]; then
+            node scripts/update-benchmarks.js --force
+          else
+            node scripts/update-benchmarks.js
+          fi

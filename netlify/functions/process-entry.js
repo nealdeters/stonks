@@ -2,7 +2,7 @@ const axios = require('axios');
 const { JWT } = require('google-auth-library');
 const googleSheets = require('@googleapis/sheets');
 const crypto = require('crypto');
-const { SHEETS, getRange, isRegistrationClosed } = require('../../src/utils/helpers');
+const { SHEETS, getRange, isRegistrationClosed, isContestEntryOpen } = require('../../src/utils/helpers');
 
 const HEADERS = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
 const INVESTMENT = 5000;
@@ -67,6 +67,16 @@ exports.handler = async (event) => {
   
         if (!ticker) {
             return { statusCode: 422, headers: HEADERS, body: JSON.stringify({ error: "Ticker symbol is required." }) };
+        }
+
+        const now = new Date();
+        if (!isContestEntryOpen(now)) {
+            return { statusCode: 422, headers: HEADERS, body: JSON.stringify({ error: "Contest does not open until Jan 2nd." }) };
+        }
+
+        const marketStatus = await axios.get(`https://finnhub.io/api/v1/stock/market-status?exchange=US&token=${process.env.FINNHUB_KEY}`);
+        if (!marketStatus.data.isOpen) {
+            return { statusCode: 422, headers: HEADERS, body: JSON.stringify({ error: "Entries are only accepted when the US Market is open." }) };
         }
 
         if (isRegistrationClosed(new Date(), controls.cutoff)) {
