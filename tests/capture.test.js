@@ -39,9 +39,8 @@ describe('Capture Script (Puppeteer)', () => {
         t.mock.method(fs, 'mkdirSync', () => {});
         const writeSpy = t.mock.method(fs, 'writeFileSync', () => {});
 
-        require('../src/capture.js');
-
-        await new Promise(resolve => setTimeout(resolve, 100));
+        const { runCapture } = require('../src/capture.js');
+        await runCapture();
 
         assert.strictEqual(gotoSpy.mock.callCount(), 1);
         assert.strictEqual(gotoSpy.mock.calls[0].arguments[0], process.env.SITE_URL);
@@ -60,9 +59,8 @@ describe('Capture Script (Puppeteer)', () => {
         const logSpy = t.mock.method(console, 'log');
         const launchSpy = t.mock.method(puppeteer, 'launch');
 
-        require('../src/capture.js');
-        
-        await new Promise(resolve => setTimeout(resolve, 150));
+        const { runCapture } = require('../src/capture.js');
+        await runCapture();
 
         assert.ok(
             logSpy.mock.calls.some(c => c.arguments[0].includes('Contest has ended')),

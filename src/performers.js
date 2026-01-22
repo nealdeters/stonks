@@ -1,5 +1,5 @@
 const initPerformers = async () => {
-    const { color: themeColor } = applyGlobalTheme();
+    const { color: themeColor } = typeof applyGlobalTheme === 'function' ? applyGlobalTheme() : { color: 'indigo' };
 
     try {
         const container = document.getElementById('performers-body');
@@ -23,7 +23,9 @@ const initPerformers = async () => {
         const controls = data.sheetData?.controls || data.controls;
         const contestants = data.sheetData?.contestants || [];
 
-        initTicker(data.prices || [], contestants);
+        if (typeof initTicker === 'function') {
+            initTicker(data.prices || [], contestants);
+        }
 
         if (controls?.title) {
             updateSiteTitle(controls.title);
@@ -85,7 +87,7 @@ const initPerformers = async () => {
                         <div class="flex items-center gap-4">
                             <span class="md:hidden text-xs font-mono text-${themeColor}-400 font-bold w-6">#${index + 1}</span>
                             <a href="/stats?uuid=${row.uuid}" class="text-white font-black hover:text-${themeColor}-400 transition-all cursor-pointer group flex items-center gap-2">
-                                <span class="text-lg md:text-base">${escapeHtml(row.name)}</span>
+                                <span class="text-lg md:text-base">${typeof escapeHtml === 'function' ? escapeHtml(row.name) : row.name}</span>
                                 <span class="text-[8px] opacity-0 group-hover:opacity-100 transform translate-x-[-4px] group-hover:translate-x-0 transition-all bg-${themeColor}-500/20 px-2 py-0.5 rounded border border-${themeColor}-500/30 text-${themeColor}-300 whitespace-nowrap">
                                     VIEW CAREER
                                 </span>

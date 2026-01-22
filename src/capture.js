@@ -18,7 +18,7 @@ async function checkIfContestOver() {
     }
 }
 
-(async () => {
+const runCapture = async () => {
     const force = process.argv.includes('--force');
     if (!force) {
         const over = await checkIfContestOver();
@@ -56,4 +56,10 @@ async function checkIfContestOver() {
     await page.screenshot({ path: path.join(dir, `leaderboard-${date}.png`), fullPage: true });
 
     await browser.close();
-})();
+};
+
+if (require.main === module) {
+    runCapture();
+}
+
+module.exports = { runCapture };

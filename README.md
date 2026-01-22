@@ -37,7 +37,7 @@ A high-performance, mobile-responsive leaderboard and automated management syste
 │   │   └── browser.js       # Centralized Puppeteer CI/CD config
 │   ├── finalize.test.js     # Unit tests for reset logic
 │   └── stats.ui.test.js     # Career stats rendering tests
-├── index.html               # Main Dashboard (PWA entry)
+├── index               # Main Dashboard (PWA entry)
 ├── manifest.json            # Web App Manifest
 └── .env                     # Local secrets (SHEET_ID, FINNHUB_KEY, GOOGLE_KEY)
 ```

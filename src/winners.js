@@ -1,5 +1,5 @@
 const initWinners = async () => {
-    const { color: themeColor } = applyGlobalTheme();
+    const { color: themeColor } = typeof applyGlobalTheme === 'function' ? applyGlobalTheme() : { color: 'indigo' };
 
     try {
         const response = await fetch(`/.netlify/functions/fetch-data`);
@@ -10,7 +10,9 @@ const initWinners = async () => {
         const contestants = data.sheetData?.contestants || [];
         const records = data.sheetData?.records || [];
 
-        initTicker(data.prices || [], contestants);
+        if (typeof initTicker === 'function') {
+            initTicker(data.prices || [], contestants);
+        }
 
         if (controls?.title) {
             updateSiteTitle(controls.title);
@@ -24,13 +26,11 @@ const initWinners = async () => {
             return;
         }
 
-        // Calculate Stats
         const yearsData = {};
         records.forEach(r => {
             const year = r.year;
             const val = parseFloat(String(r.percent_gain ||  0).replace(/[%+]/g, ''));
             
-            // Filter out market benchmarks
             const isMarket = ['SPY', 'VOO', 'IVV', '^GSPC'].includes(r.ticker?.toUpperCase()) || 
                            ['S&P 500', 'MARKET', 'BENCHMARK'].includes(r.name?.toUpperCase());
             
@@ -78,7 +78,7 @@ const initWinners = async () => {
             <div class="p-8 border-b border-${themeColor}-500/10 last:border-0 hover:bg-${themeColor}-500/5 transition-all">
                 <div class="flex flex-col md:flex-row md:items-center gap-8">
                     <div class="shrink-0 flex flex-col items-center gap-2 w-32">
-                        <a href="/history.html?year=${year}" class="text-5xl font-black text-white italic tracking-tighter opacity-80 hover:text-${themeColor}-400 transition-colors underline decoration-${themeColor}-500/30 underline-offset-8">${year}</a>
+                        <a href="/history?year=${year}" class="text-5xl font-black text-white italic tracking-tighter opacity-80 hover:text-${themeColor}-400 transition-colors underline decoration-${themeColor}-500/30 underline-offset-8">${year}</a>
                         <span class="text-xs font-bold ${groupAvg >= 0 ? 'text-emerald-400' : 'text-red-400'} bg-${themeColor}-950/40 px-3 py-1 rounded-full border border-${themeColor}-500/20">${groupAvg > 0 ? '+' : ''}${groupAvg.toFixed(2)}% Avg</span>
                     </div>
 
@@ -110,7 +110,7 @@ function renderWinnerSlot(name, uuid, rank, color, emoji, themeColor = 'indigo')
         <div class="text-2xl">${emoji}</div>
         <div class="overflow-hidden">
             <p class="text-[9px] font-black uppercase tracking-widest text-${color}">${rank} Place</p>
-            <p class="text-sm font-bold text-white group-hover:text-${color} transition-colors truncate">${escapeHtml(name)}</p>
+            <p class="text-sm font-bold text-white group-hover:text-${color} transition-colors truncate">${typeof escapeHtml === 'function' ? escapeHtml(name) : name}</p>
         </div>
     </a>`;
 }
