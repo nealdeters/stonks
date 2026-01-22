@@ -77,7 +77,7 @@ const initInstall = () => {
                              <span class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-${themeColor}-500/20 text-${themeColor}-400 text-[10px] font-black border border-${themeColor}-500/30 mt-0.5">2</span>
                              <div>
                                  <p class="text-white font-bold text-sm mb-1">Look for Prompt</p>
-                                 <p class="text-xs text-slate-400 leading-relaxed">Tap "Add Schultz Cup to Home Screen" if it appears at the bottom.</p>
+                                 <p class="text-xs text-slate-400 leading-relaxed">Tap "Add to Home Screen" if it appears at the bottom.</p>
                              </div>
                          </li>
                          <li class="flex gap-4">
