@@ -8,7 +8,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // Helper to safely parse return strings
+    const CURRENCY_FORMAT = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+
     const parseReturn = (val) => {
         if (typeof val === 'number') return val;
         if (!val) return 0;
@@ -32,7 +33,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.title = `Stonks - ${name}`;
         }
 
-        // Calculate Stats
         const seasons = userRecords.length;
         let totalReturn = 0;
         let gold = 0, silver = 0, bronze = 0;
@@ -63,6 +63,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const gain = parseReturn(r.percent_gain || r.return);
             const placeEmoji = r.place == '1' ? '🥇' : (r.place == '2' ? '🥈' : (r.place == '3' ? '🥉' : ''));
             
+            const capital = parseFloat(r.capital) || 0;
+            const shares = parseFloat(r.shares) || 0;
+            const cost = parseFloat(r.cost) || 0;
+            const marketValue = capital * (1 + (gain / 100));
+            const exitPrice = shares > 0 ? marketValue / shares : 0;
+            
             const row = document.createElement('tr');
             row.className = "block md:table-row hover:bg-indigo-500/5 transition-all border-b border-indigo-500/10 md:border-none group";
             
@@ -70,7 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td class="px-8 py-4 block md:table-cell">
                     <span class="text-indigo-300/70 text-[10px] uppercase font-black md:hidden">Year</span>
                     <div class="flex flex-col items-end md:items-start">
-                        <a href="/history.html?year=${r.year}" class="font-black text-white hover:text-${themeColor}-400 transition-colors underline decoration-${themeColor}-500/30 underline-offset-4">${r.year}</a>
+                        <a href="/history?year=${r.year}" class="font-black text-white hover:text-${themeColor}-400 transition-colors underline decoration-${themeColor}-500/30 underline-offset-4">${r.year}</a>
                     </div>
                 </td>
                 <td class="px-8 py-4 block md:table-cell">
@@ -83,6 +89,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <span class="text-indigo-300/70 text-[10px] uppercase font-black md:hidden">Place</span>
                     <div class="flex flex-col items-end md:items-center">
                         <span class="font-bold text-white">${r.place} <span class="text-lg">${placeEmoji}</span></span>
+                    </div>
+                </td>
+                <td class="px-8 py-4 block md:table-cell text-left md:text-right">
+                    <span class="text-indigo-300/70 text-[10px] uppercase font-black md:hidden">Investment</span>
+                    <div class="flex flex-col items-end">
+                        <p class="text-xs font-bold text-white">$${capital.toLocaleString(undefined, CURRENCY_FORMAT)}</p>
+                        <p class="text-[10px] text-slate-400 font-mono">${shares.toFixed(3)} @ $${cost.toFixed(2)}</p>
+                    </div>
+                </td>
+                <td class="px-8 py-4 block md:table-cell text-left md:text-right">
+                    <span class="text-indigo-300/70 text-[10px] uppercase font-black md:hidden">Value</span>
+                    <div class="flex flex-col items-end">
+                        <p class="text-xs font-black text-white">$${marketValue.toLocaleString(undefined, CURRENCY_FORMAT)}</p>
+                        <p class="text-[10px] text-slate-400 font-mono">$${exitPrice.toFixed(2)}</p>
                     </div>
                 </td>
                 <td class="px-8 py-4 block md:table-cell text-left md:text-right">

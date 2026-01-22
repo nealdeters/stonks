@@ -4,12 +4,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const year = urlParams.get('year');
 
     if (!year) {
-        window.location.href = '/portfolio.html';
+        window.location.href = '/';
         return;
     }
 
     document.getElementById('year-title').textContent = `${year} Contest`;
     document.title = `Stonks - ${year} History`;
+
+    const parseReturn = (val) => {
+        if (typeof val === 'number') return val;
+        if (!val) return 0;
+        return parseFloat(String(val).replace(/[%+]/g, ''));
+    };
 
     try {
         const response = await fetch('/.netlify/functions/fetch-data');
@@ -20,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         const records = data.sheetData?.records || [];
-        // Filter by year and sort by place (ascending)
+
         const yearRecords = records
             .filter(r => r.year == year)
             .sort((a, b) => parseInt(a.place) - parseInt(b.place));
@@ -35,7 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         yearRecords.forEach(r => {
             const isWin = r.place == '1';
-            const gain = parseFloat(r.percent_gain || r.return || 0);
+            const gain = parseReturn(r.percent_gain || 0);
             
             const row = document.createElement('tr');
             row.className = "block md:table-row hover:bg-indigo-500/5 transition-all border-b border-indigo-500/10 md:border-none group";
@@ -47,7 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <span class="md:hidden text-xs font-mono text-${themeColor}-400 font-bold">#${r.place}</span>
                         <div>
                             <div class="flex items-center gap-2">
-                                <a href="/stats.html?uuid=${r.user_uuid}" class="text-white font-black hover:text-${themeColor}-400 transition-all cursor-pointer group flex items-center gap-2">
+                                <a href="/stats?uuid=${r.user_uuid}" class="text-white font-black hover:text-${themeColor}-400 transition-all cursor-pointer group flex items-center gap-2">
                                     <span class="text-base md:text-sm tracking-tight">${typeof escapeHtml === 'function' ? escapeHtml(r.name) : r.name}</span>
                                     <span class="text-[8px] opacity-0 group-hover:opacity-100 transform translate-x-[-4px] group-hover:translate-x-0 transition-all bg-${themeColor}-500/20 px-2 py-0.5 rounded border border-${themeColor}-500/30 text-${themeColor}-300 whitespace-nowrap">VIEW CAREER</span>
                                 </a>

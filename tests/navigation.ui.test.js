@@ -19,7 +19,7 @@ describe('Navigation Links UI', () => {
         page = await browser.newPage();
     });
 
-    const pages = ['index.html', 'submit.html', 'winners.html', 'performers.html', 'stats.html'];
+    const pages = ['index', 'submit', 'winners', 'performers', 'stats'];
 
     pages.forEach(filename => {
         test(`News link exists on ${filename}`, async () => {
@@ -32,8 +32,8 @@ describe('Navigation Links UI', () => {
                 }
             });
 
-            let filePath = `file://${path.join(process.cwd(), filename)}`;
-            if (filename === 'stats.html') {
+            let filePath = `file://${path.join(process.cwd(), filename + '.html')}`;
+            if (filename === 'stats') {
                 filePath += '?uuid=test-uuid';
             }
             await page.goto(filePath, { waitUntil: 'domcontentloaded' });

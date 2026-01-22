@@ -1,7 +1,7 @@
 const UPDATE_INTERVAL = 5 * 60 * 1000;
 const CURRENCY_FORMAT = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
 
-const { color: themeColor, icon: themeIcon } = applyGlobalTheme();
+const { color: themeColor, icon: themeIcon } = typeof applyGlobalTheme === 'function' ? applyGlobalTheme() : { color: 'indigo', icon: '🏆' };
 
 let currentPrizes = {};
 
@@ -95,7 +95,9 @@ const initApp = async () => {
         }
 
         updateBenchmarks(prices);
-        initTicker(prices, contestants);
+        if (typeof initTicker === 'function') {
+            initTicker(prices, contestants);
+        }
 
         const controls = sheetData.controls;
         if (controls) {
@@ -186,7 +188,7 @@ function renderLeaderboard(results, sheetData) {
                     <div class="flex flex-col gap-1.5">
                         <div class="flex items-center gap-2">
                             <a href="/stats?uuid=${res.user_uuid}" class="text-white font-black hover:text-cyan-400 transition-all cursor-pointer group flex items-center gap-2">
-                                <span class="text-base md:text-sm tracking-tight">${escapeHtml(res.name)}</span>
+                                <span class="text-base md:text-sm tracking-tight">${typeof escapeHtml === 'function' ? escapeHtml(res.name) : res.name}</span>
                                 <span class="text-[8px] opacity-0 group-hover:opacity-100 transform translate-x-[-4px] group-hover:translate-x-0 transition-all bg-${themeColor}-500/20 px-2 py-0.5 rounded border border-${themeColor}-500/30 text-${themeColor}-300 whitespace-nowrap">
                                     VIEW CAREER
                                 </span>
@@ -201,8 +203,8 @@ function renderLeaderboard(results, sheetData) {
             <td class="px-8 py-3 md:py-5 block md:table-cell text-left md:text-center">
                 <span class="text-slate-400 text-[10px] uppercase font-black md:hidden pt-1">Stock</span>
                 <div class="flex flex-col items-end md:items-center">
-                    <span class="bg-${themeColor}-500/20 text-${themeColor}-200 px-2.5 py-1 rounded text-[10px] font-black tracking-widest border border-${themeColor}-500/30">${escapeHtml(res.ticker)}</span>
-                    <span class="text-[9px] text-slate-300 mt-2 font-bold uppercase tracking-widest">${escapeHtml(res.stockname)}</span>
+                    <span class="bg-${themeColor}-500/20 text-${themeColor}-200 px-2.5 py-1 rounded text-[10px] font-black tracking-widest border border-${themeColor}-500/30">${typeof escapeHtml === 'function' ? escapeHtml(res.ticker) : res.ticker}</span>
+                    <span class="text-[9px] text-slate-300 mt-2 font-bold uppercase tracking-widest">${typeof escapeHtml === 'function' ? escapeHtml(res.stockname) : res.stockname}</span>
                 </div>
             </td>
             <td class="px-8 py-3 md:py-5 block md:table-cell text-left md:text-right">
