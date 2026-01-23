@@ -1,8 +1,8 @@
-const { test, describe, before, beforeEach, afterEach } = require('node:test');
-const assert = require('node:assert');
-const axios = require('axios');
-const googleSheets = require('@googleapis/sheets');
-const { run } = require('../scripts/update-benchmarks');
+import { test, describe, before, beforeEach, afterEach } from 'node:test';
+import assert from 'node:assert';
+import axios from 'axios';
+import * as googleSheets from '@googleapis/sheets';
+import { run } from '../../scripts/update-benchmarks.js';
 
 describe('Update Benchmarks Script', () => {
     let originalArgv;

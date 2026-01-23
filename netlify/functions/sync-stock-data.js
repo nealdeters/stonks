@@ -1,9 +1,9 @@
-const axios = require('axios');
-const { JWT } = require('google-auth-library');
-const googleSheets = require('@googleapis/sheets');
-const { Redis } = require('@upstash/redis');
-const { schedule } = require('@netlify/functions');
-const { SHEETS, getRange, parseRows } = require('../../src/utils/helpers');
+import axios from 'axios';
+import { JWT } from 'google-auth-library';
+import googleSheets from '@googleapis/sheets';
+import { Redis } from '@upstash/redis';
+import { schedule } from '@netlify/functions';
+import { SHEETS, getRange, parseRows } from '../../src/utils/helpers.js';
 
 const API_BASE_URL = "https://finnhub.io/api/v1";
 
@@ -51,6 +51,8 @@ const deriveWinners = (records) => {
         if (place === 1) {
             winnersMap[year].first_user_name = record.name;
             winnersMap[year].first_user_uuid = record.user_uuid;
+            winnersMap[year].ticker = record.ticker;
+            winnersMap[year].return = record.percent_gain;
         } else if (place === 2) {
             winnersMap[year].second_user_name = record.name;
             winnersMap[year].second_user_uuid = record.user_uuid;
@@ -62,7 +64,7 @@ const deriveWinners = (records) => {
     return Object.values(winnersMap).sort((a, b) => b.year - a.year);
 };
 
-const handler = async (event) => {
+export const syncStockData = async (event) => {
     console.log("Starting scheduled sync...");
     const API_KEY = process.env.FINNHUB_KEY;
     const SHEET_ID = process.env.SHEET_ID;
@@ -125,7 +127,7 @@ const handler = async (event) => {
             });
         }
 
-        const payload = { sheetData, prices, isMarketOpen, stockNames };
+        const payload = { sheetData, prices, isMarketOpen, stockNames, lastUpdated: Date.now() };
         
         await redis.set('STOCK_DASHBOARD_DATA', payload, { ex: 900 });
 
@@ -138,4 +140,4 @@ const handler = async (event) => {
     }
 };
 
-exports.handler = schedule("*/10 * * * *", handler);
+export const handler = schedule("*/10 * * * *", syncStockData);

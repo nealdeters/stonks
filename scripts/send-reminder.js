@@ -1,7 +1,7 @@
-const { Resend } = require('resend');
-const { JWT } = require('google-auth-library');
-const googleSheets = require('@googleapis/sheets');
-const { SHEETS, getRange, isRegistrationClosed } = require('../src/utils/helpers');
+import { Resend } from 'resend';
+import { JWT } from 'google-auth-library';
+import googleSheets from '@googleapis/sheets';
+import { SHEETS, getRange, isRegistrationClosed } from '../src/utils/helpers.js';
 
 async function run() {
     const force = process.argv.includes('--force');
@@ -92,7 +92,4 @@ async function run() {
     }
 }
 
-if (require.main === module) {
-    run();
-}
-module.exports = { run };
+run();

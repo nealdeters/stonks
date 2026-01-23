@@ -53,14 +53,14 @@ describe('finalize.js - Calculation Logic', () => {
 
         await run(mockSheets);
 
-        assert.ok(capturedArchive, 'Archive should not be null');
+        expect(capturedArchive).not.toBeNull();
         
-        assert.strictEqual(capturedArchive[0][1], 'Neal');
-        assert.strictEqual(capturedArchive[0][8], 1);
-        assert.strictEqual(capturedArchive[0][7], '50.00%');
+        expect(capturedArchive[0][1]).toBe('Neal');
+        expect(capturedArchive[0][8]).toBe(1);
+        expect(capturedArchive[0][7]).toBe('50.00%');
 
-        assert.strictEqual(capturedArchive[1][1], 'Kyle');
-        assert.strictEqual(capturedArchive[1][8], 2);
-        assert.strictEqual(capturedArchive[1][7], '10.00%');
+        expect(capturedArchive[1][1]).toBe('Kyle');
+        expect(capturedArchive[1][8]).toBe(2);
+        expect(capturedArchive[1][7]).toBe('10.00%');
     });
 });

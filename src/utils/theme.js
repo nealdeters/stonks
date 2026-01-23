@@ -1,4 +1,4 @@
-const getThemeConfig = () => {
+export const getThemeConfig = () => {
     const month = new Date().getMonth();
     const isDecember = month === 11;
     const isNovember = month === 10;
@@ -18,7 +18,7 @@ const getThemeConfig = () => {
     };
 };
 
-const applyGlobalTheme = () => {
+export const applyGlobalTheme = () => {
     const theme = getThemeConfig();
     
     if (typeof document !== 'undefined') {
@@ -98,7 +98,7 @@ const applyGlobalTheme = () => {
     return theme;
 };
 
-const updateSiteTitle = (title) => {
+export const updateSiteTitle = (title) => {
     if (!title || typeof document === 'undefined') return;
 
     const headerTitle = document.querySelector('header h1');
@@ -112,13 +112,3 @@ const updateSiteTitle = (title) => {
         document.title = title;
     }
 };
-
-if (typeof module !== 'undefined') {
-    module.exports = { getThemeConfig, applyGlobalTheme, updateSiteTitle };
-}
-
-if (typeof window !== 'undefined') {
-    window.getThemeConfig = getThemeConfig;
-    window.applyGlobalTheme = applyGlobalTheme;
-    window.updateSiteTitle = updateSiteTitle;
-}

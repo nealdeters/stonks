@@ -1,4 +1,6 @@
-const initTicker = (prices) => {
+import { escapeHtml } from './sanitize.js';
+
+export const initTicker = (prices) => {
     if (!prices || prices.length === 0) return;
 
     if (!document.getElementById('ticker-style')) {
@@ -76,10 +78,3 @@ const initTicker = (prices) => {
         `;
     }).join('');
 };
-
-if (typeof module !== 'undefined') {
-    module.exports = { initTicker };
-}
-if (typeof window !== 'undefined') {
-    window.initTicker = initTicker;
-}

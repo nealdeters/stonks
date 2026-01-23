@@ -1,6 +1,6 @@
-const puppeteer = require('puppeteer');
+import puppeteer from 'puppeteer';
 
-async function launchBrowser() {
+export async function launchBrowser() {
     return await puppeteer.launch({
         executablePath: puppeteer.executablePath(),
         args: [
@@ -14,6 +14,3 @@ async function launchBrowser() {
         headless: 'new'
     });
 }
-
-// Ensure this matches your require destructuring
-module.exports = { launchBrowser };

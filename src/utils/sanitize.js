@@ -1,4 +1,4 @@
-const escapeHtml = (unsafe) => {
+export const escapeHtml = (unsafe) => {
     return (unsafe || "").toString()
          .replace(/&/g, "&amp;")
          .replace(/</g, "&lt;")
@@ -6,7 +6,3 @@ const escapeHtml = (unsafe) => {
          .replace(/"/g, "&quot;")
          .replace(/'/g, "&#039;");
 };
-
-if (typeof module !== 'undefined') {
-    module.exports = { escapeHtml };
-}

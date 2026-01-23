@@ -25,8 +25,7 @@ describe('Backend Function: fetch-data', () => {
             stockNames: { 'AAPL': 'Apple Inc' }
         };
 
-        const originalFetch = global.fetch;
-        global.fetch = async (url) => {
+        const fetchSpy = vi.stubGlobal('fetch', async (url) => {
             const isPipeline = url && url.includes('/pipeline');
             const responseData = isPipeline 
                 ? [{ result: JSON.stringify(mockRedisData) }] 
@@ -43,20 +42,20 @@ describe('Backend Function: fetch-data', () => {
                 text: async () => JSON.stringify(responseData),
                 clone: function() { return this; }
             };
-        };
+        });
 
         try {
             const res = await handler();
             const body = JSON.parse(res.body);
 
-            assert.strictEqual(res.statusCode, 200, `Status should be 200. Error: ${body.error}`);
-            assert.ok(body.prices, 'Prices array should exist');
-            assert.ok(Array.isArray(body.prices), 'Prices should be an array');
-            assert.ok(body.prices.length > 0, 'Prices array should not be empty');
-            assert.strictEqual(body.prices[0].ticker, 'AAPL', 'First ticker should be AAPL');
-            assert.strictEqual(body.prices[0].price, 150.00, 'Price should match mock');
+            expect(res.statusCode).toBe(200);
+            expect(body.prices).toBeDefined();
+            expect(Array.isArray(body.prices)).toBe(true);
+            expect(body.prices.length).toBeGreaterThan(0);
+            expect(body.prices[0].ticker).toBe('AAPL');
+            expect(body.prices[0].price).toBe(150.00);
         } finally {
-            global.fetch = originalFetch;
+            vi.unstubAllGlobals();
         }
     });
 });

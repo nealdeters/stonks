@@ -1,50 +1,49 @@
-const { test, describe, before, beforeEach } = require('node:test');
-const assert = require('node:assert');
-const fs = require('fs');
-const puppeteer = require('puppeteer');
-const axios = require('axios');
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
+import fs from 'fs';
+import puppeteer from 'puppeteer';
+import axios from 'axios';
+import { runCapture } from '../capture.js';
 
 describe('Capture Script (Puppeteer)', () => {
-    before(() => {
+    beforeAll(() => {
         process.env.SITE_URL = 'https://stonks-test.netlify.app';
     });
 
     beforeEach(() => {
         process.argv = ['node', 'src/capture.js'];
-        delete require.cache[require.resolve('../src/capture.js')];
+        vi.clearAllMocks();
     });
 
-    test('Successfully takes a screenshot when contest is active', async (t) => {
-        t.mock.method(axios, 'get', async () => ({
+    it('Successfully takes a screenshot when contest is active', async () => {
+        vi.spyOn(axios, 'get').mockResolvedValue({
             data: {
                 sheetData: {
                     controls: { end: '2099-12-31' }
                 }
             }
-        }));
+        });
 
-        const screenshotSpy = t.mock.fn(async () => Buffer.from('fake-png-data'));
-        const gotoSpy = t.mock.fn(async () => ({}));
+        const screenshotSpy = vi.fn(async () => Buffer.from('fake-png-data'));
+        const gotoSpy = vi.fn(async () => ({}));
         
-        t.mock.method(puppeteer, 'launch', async () => ({
+        vi.spyOn(puppeteer, 'launch').mockResolvedValue({
             newPage: async () => ({
                 setViewport: async () => {},
                 goto: gotoSpy,
                 screenshot: screenshotSpy
             }),
             close: async () => {}
-        }));
+        });
 
-        t.mock.method(fs, 'existsSync', () => true);
-        t.mock.method(fs, 'mkdirSync', () => {});
-        const writeSpy = t.mock.method(fs, 'writeFileSync', () => {});
+        vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+        vi.spyOn(fs, 'mkdirSync').mockImplementation(() => {});
+        const writeSpy = vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
 
-        const { runCapture } = require('../src/capture.js');
         await runCapture();
 
-        assert.strictEqual(gotoSpy.mock.callCount(), 1);
-        assert.strictEqual(gotoSpy.mock.calls[0].arguments[0], process.env.SITE_URL);
-        assert.strictEqual(screenshotSpy.mock.callCount(), 1);
+        expect(gotoSpy).toHaveBeenCalledTimes(1);
+        expect(gotoSpy).toHaveBeenCalledWith(process.env.SITE_URL, expect.anything());
+        expect(screenshotSpy).toHaveBeenCalledTimes(1);
     });
 
     test('Skips screenshot when contest has ended', async (t) => {
@@ -59,7 +58,6 @@ describe('Capture Script (Puppeteer)', () => {
         const logSpy = t.mock.method(console, 'log');
         const launchSpy = t.mock.method(puppeteer, 'launch');
 
-        const { runCapture } = require('../src/capture.js');
         await runCapture();
 
         assert.ok(

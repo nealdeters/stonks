@@ -1,13 +1,13 @@
-const axios = require('axios');
-const { JWT } = require('google-auth-library');
-const googleSheets = require('@googleapis/sheets');
-const crypto = require('crypto');
-const { SHEETS, getRange, isRegistrationClosed, isContestEntryOpen } = require('../../src/utils/helpers');
+import axios from 'axios';
+import { JWT } from 'google-auth-library';
+import googleSheets from '@googleapis/sheets';
+import crypto from 'crypto';
+import { SHEETS, getRange, isRegistrationClosed, isContestEntryOpen } from '../../src/utils/helpers.js';
 
 const HEADERS = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
 const INVESTMENT = 5000;
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
     let formData;
     try {
         if (event.isBase64Encoded) {
