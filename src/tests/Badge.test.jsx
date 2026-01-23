@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
 
-import Badge from '../components/Badge.jsx';
+import Badge from '../Badge.jsx';
 import React from 'react';
 
 describe('Badge Component', () => {

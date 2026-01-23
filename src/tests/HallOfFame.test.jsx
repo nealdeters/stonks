@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
 
@@ -15,6 +15,8 @@ describe('HallOfFame Component', () => {
     { year: '2023', name: 'Alice', percent_gain: '15.5', place: '1' }
   ];
   const mockTheme = { color: 'indigo', icon: '🏆' };
+
+  afterEach(cleanup);
 
   it('renders winners correctly', () => {
     const onYearClick = vi.fn();

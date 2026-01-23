@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import { SHEETS, getRange, isContestOver } from '../src/utils/helpers.js';
 
-async function run() {
+export async function run() {
     const force = process.argv.includes('--force');
     const manualToArg = process.argv.find(arg => arg.startsWith('--to='));
     let recipients = [];
@@ -92,4 +92,6 @@ async function run() {
     }
 }
 
-run();
+if (process.argv[1]?.includes('send-report.js')) {
+    run();
+}

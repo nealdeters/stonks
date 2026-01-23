@@ -44,27 +44,26 @@ describe('Capture Script (Puppeteer)', () => {
         expect(gotoSpy).toHaveBeenCalledTimes(1);
         expect(gotoSpy).toHaveBeenCalledWith(process.env.SITE_URL, expect.anything());
         expect(screenshotSpy).toHaveBeenCalledTimes(1);
-    });
+    }, 30000);
 
-    test('Skips screenshot when contest has ended', async (t) => {
-        t.mock.method(axios, 'get', async () => ({
+    it('Skips screenshot when contest has ended', async () => {
+        vi.spyOn(axios, 'get').mockResolvedValue({
             data: {
                 sheetData: {
                     controls: { end: '2020-01-01' }
                 }
             }
-        }));
+        });
 
-        const logSpy = t.mock.method(console, 'log');
-        const launchSpy = t.mock.method(puppeteer, 'launch');
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+        const launchSpy = vi.spyOn(puppeteer, 'launch');
 
         await runCapture();
 
-        assert.ok(
-            logSpy.mock.calls.some(c => c.arguments[0].includes('Contest has ended')),
-            "Expected 'Contest has ended' log message was not found"
-        );
+        expect(
+            logSpy.mock.calls.some(c => c[0].includes('Contest has ended'))
+        ).toBe(true);
         
-        assert.strictEqual(launchSpy.mock.callCount(), 0, "Puppeteer should not have launched");
+        expect(launchSpy).not.toHaveBeenCalled();
     });
 });

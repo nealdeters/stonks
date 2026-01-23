@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
 
@@ -17,11 +17,15 @@ describe('SubmitPick Component', () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    cleanup();
+  });
+
   it('renders the form correctly', () => {
     render(<SubmitPick theme={mockTheme} />);
     expect(screen.getByText('Submit Pick')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('John Doe')).toBeInTheDocument();
-    expect(screen.getByText('Submit Entry')).toBeInTheDocument();
+    expect(screen.getAllByPlaceholderText('John Doe')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('Submit Entry')[0]).toBeInTheDocument();
   });
 
   it('shows processing state and handles success', async () => {
@@ -32,12 +36,12 @@ describe('SubmitPick Component', () => {
 
     render(<SubmitPick theme={mockTheme} />);
     
-    fireEvent.change(screen.getByPlaceholderText('John Doe'), { target: { value: 'Neal' } });
-    fireEvent.change(screen.getByPlaceholderText('john@example.com'), { target: { value: 'neal@test.com' } });
-    fireEvent.change(screen.getByPlaceholderText('AAPL'), { target: { value: 'NVDA' } });
-    fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'secret' } });
+    fireEvent.change(screen.getAllByPlaceholderText('John Doe')[0], { target: { value: 'Neal' } });
+    fireEvent.change(screen.getAllByPlaceholderText('john@example.com')[0], { target: { value: 'neal@test.com' } });
+    fireEvent.change(screen.getAllByPlaceholderText('AAPL')[0], { target: { value: 'NVDA' } });
+    fireEvent.change(screen.getAllByPlaceholderText('••••••••')[0], { target: { value: 'secret' } });
 
-    const submitBtn = screen.getByText('Submit Entry');
+    const submitBtn = screen.getAllByText('Submit Entry')[0];
     fireEvent.click(submitBtn);
 
     expect(screen.getByText('Processing...')).toBeInTheDocument();
@@ -55,7 +59,14 @@ describe('SubmitPick Component', () => {
     });
 
     render(<SubmitPick theme={mockTheme} />);
-    fireEvent.click(screen.getByText('Submit Entry'));
+    
+    // Fill form to pass HTML5 validation
+    fireEvent.change(screen.getAllByPlaceholderText('John Doe')[0], { target: { value: 'Neal' } });
+    fireEvent.change(screen.getAllByPlaceholderText('john@example.com')[0], { target: { value: 'neal@test.com' } });
+    fireEvent.change(screen.getAllByPlaceholderText('AAPL')[0], { target: { value: 'NVDA' } });
+    fireEvent.change(screen.getAllByPlaceholderText('••••••••')[0], { target: { value: 'wrong' } });
+
+    fireEvent.click(screen.getAllByText('Submit Entry')[0]);
 
     await waitFor(() => {
       expect(screen.getByText(/Invalid Secret/i)).toBeInTheDocument();

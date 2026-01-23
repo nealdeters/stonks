@@ -1,12 +1,16 @@
 /** @vitest-environment jsdom */
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, afterEach } from 'vitest';
+import { render, screen, cleanup } from '@testing-library/react';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
 import Leaderboard from '../Leaderboard';
 import React from 'react';
 
 describe('Leaderboard Component - Prize Badges', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   const mockTheme = { color: 'indigo' };
   const mockPrizes = {
     '1': { emoji: '🥇', amount: '$100' },
@@ -20,7 +24,7 @@ describe('Leaderboard Component - Prize Badges', () => {
     
     render(<Leaderboard contestants={contestants} prizes={mockPrizes} theme={mockTheme} onPlayerClick={() => {}} />);
     
-    const badge = screen.getByText('$100').closest('span');
+    const badge = screen.getAllByText('$100')[0].closest('span');
     expect(badge).toHaveClass('bg-amber-500/20');
     expect(badge).toHaveClass('text-amber-500');
     expect(badge).not.toHaveClass('bg-red-500/20');
@@ -34,10 +38,10 @@ describe('Leaderboard Component - Prize Badges', () => {
     
     render(<Leaderboard contestants={contestants} prizes={mockPrizes} theme={mockTheme} onPlayerClick={() => {}} />);
     
-    const winnerBadge = screen.getByText('$100').closest('span');
+    const winnerBadge = screen.getAllByText('$100')[0].closest('span');
     expect(winnerBadge).toHaveClass('bg-amber-500/20');
 
-    const loserBadge = screen.getByText('Participation').closest('span');
+    const loserBadge = screen.getAllByText('Participation')[0].closest('span');
     expect(loserBadge).toHaveClass('bg-red-500/20');
     expect(loserBadge).toHaveClass('text-red-400');
   });

@@ -23,4 +23,4 @@ jobs:
         run: npm install puppeteer axios
 
       - name: Run Tests
-        run: node --test tests/
+        run: npm test

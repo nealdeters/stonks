@@ -7,7 +7,7 @@ import Performers from './Performers';
 import NewsView from './News';
 import Stats from './Stats';
 import HallOfFame from './HallOfFame';
-import { getStonksData } from '../api';
+import { getStonksData } from './api';
 
 const Ticker = ({ prices, theme }) => {
   if (!prices || prices.length === 0) return null;
@@ -195,7 +195,7 @@ export default function App() {
                     </h1>
                     <div id="market-status" className={`flex items-center gap-2 px-3 py-1 mt-2 rounded-full bg-${tc}-950/50 border border-${tc}-500/30 w-fit mx-auto md:mx-0`}>
                         <span id="status-dot" className={`h-2 w-2 rounded-full ${data.isMarketOpen ? 'bg-emerald-500 animate-ping' : 'bg-red-500'}`}></span>
-                        <span id="status-text" className={`text-[10px] font-black uppercase tracking-widest text-${tc}-300`}>{isSyncing ? 'Syncing...' : (data.isMarketOpen ? 'Market Open' : (data.holidayName ? `Closed (${data.holidayName})` : 'Market Closed'))}</span>
+                        <span id="status-text" data-testid="market-status-text" className={`text-[10px] font-black uppercase tracking-widest text-${tc}-300`}>{isSyncing ? 'Syncing...' : (data.isMarketOpen ? 'Market Open' : (data.holidayName ? `Closed (${data.holidayName})` : 'Market Closed'))}</span>
                     </div>
                 </div>
             </div>
@@ -209,7 +209,7 @@ export default function App() {
                 <button id="add-participant-btn" onClick={() => navigate('submit')} className={`btn-secondary px-4 md:px-6 py-2 rounded-xl bg-${tc}-500/10 hover:bg-${tc}-500/20 border border-${tc}-500/20 text-[10px] font-black uppercase tracking-widest text-${tc}-300 transition-all active:scale-95 whitespace-nowrap`}>
                     Add Participant
                 </button>
-                <div id="last-updated" className={`text-[10px] text-${tc}-400/70 uppercase tracking-widest font-bold bg-${tc}-950/30 px-4 py-2 rounded-lg border border-${tc}-500/20 whitespace-nowrap`}>
+                <div id="last-updated" data-testid="sync-timestamp" className={`text-[10px] text-${tc}-400/70 uppercase tracking-widest font-bold bg-${tc}-950/30 px-4 py-2 rounded-lg border border-${tc}-500/20 whitespace-nowrap`}>
                     {isSyncing ? 'SYNCING...' : (data.lastUpdated ? `SYNC: ${new Date(data.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'SYNCING...')}
                 </div>
             </div>

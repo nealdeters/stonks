@@ -1,12 +1,15 @@
-const { test, describe, before, beforeEach } = require('node:test');
-const assert = require('node:assert');
-const fs = require('fs');
-const googleAuth = require('google-auth-library');
-const googleSheets = require('@googleapis/sheets');
-const resendModule = require('resend');
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
+import googleSheets from '@googleapis/sheets';
+import { Resend } from 'resend';
+import { run } from '../../scripts/send-reminder.js';
+
+vi.mock('@googleapis/sheets');
+vi.mock('resend', () => ({
+    Resend: vi.fn()
+}));
 
 describe('Contest Reminder Script', () => {
-    before(() => {
+    beforeAll(() => {
         process.env.RESEND_API_KEY = 're_test_123';
         process.env.SHEET_ID = 'test_sheet_id';
         process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL = 'test@test.com';
@@ -16,16 +19,11 @@ describe('Contest Reminder Script', () => {
 
     beforeEach(() => {
         process.argv = ['node', 'scripts/send-reminder.js'];
-        delete require.cache[require.resolve('../scripts/send-reminder.js')];
+        vi.clearAllMocks();
     });
 
-    test('Filters out already registered users and sends to pending only', async (t) => {
-        const originalJWT = googleAuth.JWT;
-        googleAuth.JWT = function() {
-            return { authorize: async () => ({}) };
-        };
-
-        t.mock.method(googleSheets, 'sheets', () => ({
+    it('Filters out already registered users and sends to pending only', async () => {
+        vi.mocked(googleSheets.sheets).mockReturnValue({
             spreadsheets: {
                 values: {
                     get: async () => ({
@@ -53,36 +51,23 @@ describe('Contest Reminder Script', () => {
                     })
                 }
             }
-        }));
-
-        const originalReadFileSync = fs.readFileSync;
-        t.mock.method(fs, 'readFileSync', (path, options) => {
-            return originalReadFileSync(path, options);
         });
 
-        const sendSpy = t.mock.fn(async () => ({ data: { id: 'ok' } }));
-        const originalResend = resendModule.Resend;
-        resendModule.Resend = function() {
-            return { emails: { send: sendSpy } };
-        };
+        const sendSpy = vi.fn().mockResolvedValue({ data: { id: 'ok' } });
+        vi.mocked(Resend).mockImplementation(() => ({
+            emails: { send: sendSpy }
+        }));
 
-        try {
-            const { run } = require('../scripts/send-reminder.js');
-            await run();
+        await run();
 
-            assert.strictEqual(sendSpy.mock.callCount(), 1);
-            
-            const callArgs = sendSpy.mock.calls[0].arguments[0];
+        expect(sendSpy).toHaveBeenCalledTimes(1);
+        const callArgs = sendSpy.mock.calls[0][0];
 
-            assert.strictEqual(callArgs.to.length, 2);
-            assert.ok(callArgs.to.includes('kirana@test.com'));
-            assert.ok(callArgs.to.includes('oliver@test.com'));
-            assert.ok(!callArgs.to.includes('neal@test.com'));
-            
-            assert.ok(callArgs.subject.includes('Schultz Cup'));
-        } finally {
-            googleAuth.JWT = originalJWT;
-            resendModule.Resend = originalResend;
-        }
+        expect(callArgs.to.length).toBe(2);
+        expect(callArgs.to).toContain('kirana@test.com');
+        expect(callArgs.to).toContain('oliver@test.com');
+        expect(callArgs.to).not.toContain('neal@test.com');
+        
+        expect(callArgs.subject).toContain('Schultz Cup');
     });
 });

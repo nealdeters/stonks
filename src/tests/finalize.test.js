@@ -1,21 +1,24 @@
-const { test, describe, beforeEach } = require('node:test');
-const assert = require('node:assert');
-const { mock } = require('node:test');
-const axios = require('axios');
-const { run } = require('../scripts/finalize');
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import axios from 'axios';
+import { run } from '../../scripts/finalize.js';
+
+vi.mock('axios');
+vi.mock('dotenv/config', () => ({}));
 
 describe('finalize.js - Calculation Logic', () => {
     
     beforeEach(() => {
         process.env.FINNHUB_KEY = 'mock-key';
         process.env.SHEET_ID = 'test-id';
-        mock.restoreAll();
+        process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL = 'test@test.com';
+        process.env.GOOGLE_PRIVATE_KEY = 'test-key';
+        vi.clearAllMocks();
     });
 
-    test('should calculate gain and assign correct place rank', async () => {
+    it('should calculate gain and assign correct place rank', async () => {
         let capturedArchive = null;
         
-        mock.method(axios, 'get', async (url) => {
+        vi.mocked(axios.get).mockImplementation(async (url) => {
             if (url.includes('symbol=NVDA')) {
                 return { data: { c: 150 } };
             }
@@ -30,7 +33,11 @@ describe('finalize.js - Calculation Logic', () => {
                 values: {
                     get: async (params) => {
                         if (params.range.includes('Controls')) {
-                            return { data: { values: [['end'], ['2025-01-01']] } };
+                            return { data: { values: [['end'], ['2000-01-01']] } };
+                        }
+                        if (params.range.includes('Records')) {
+                             // Script appends to Records, doesn't necessarily read it first, but if it did:
+                             return { data: { values: [] } };
                         }
                         return { 
                             data: { 
@@ -42,8 +49,14 @@ describe('finalize.js - Calculation Logic', () => {
                             } 
                         };
                     },
-                    append: async ({ resource }) => {
-                        capturedArchive = resource.values;
+                    append: async (params) => {
+                        const body = params.resource || params.requestBody;
+                        capturedArchive = body.values;
+                        return { status: 200 };
+                    },
+                    update: async (params) => {
+                        const body = params.resource || params.requestBody;
+                        capturedArchive = body.values;
                         return { status: 200 };
                     },
                     clear: async () => ({ status: 200 })

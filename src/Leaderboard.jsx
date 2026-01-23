@@ -15,10 +15,13 @@ export default function Leaderboard({ contestants, prizes, onPlayerClick, theme 
     if (!prize) return null;
 
     let styleClass = `bg-${tc}-300/20 text-${tc}-300 border-${tc}-300/50`;
-    if (index === total - 1) styleClass = "bg-red-500/20 text-red-400 border-red-500/50";
     if (index === 0) styleClass = "bg-amber-500/20 text-amber-500 border-amber-500/50";
     if (index === 1) styleClass = "bg-slate-300/20 text-slate-300 border-slate-300/50";
     if (index === 2) styleClass = "bg-orange-600/20 text-orange-400 border-orange-600/50";
+    else if (index === 1) styleClass = "bg-slate-300/20 text-slate-300 border-slate-300/50";
+    else if (index === 2) styleClass = "bg-orange-600/20 text-orange-400 border-orange-600/50";
+
+    if (index === total - 1 && total > 1) styleClass = "bg-red-500/20 text-red-400 border-red-500/50";
 
     return (
       <span className={`mt-1.5 block w-fit px-2 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-tighter ${styleClass}`}>

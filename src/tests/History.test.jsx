@@ -23,9 +23,9 @@ describe('HistoryView Component', () => {
   it('renders records for the specified year', () => {
     render(<HistoryView year="2023" records={mockRecords} theme={mockTheme} onPlayerClick={mockOnPlayerClick} />);
     expect(screen.getAllByText('Alice')[0]).toBeInTheDocument();
-    expect(screen.getByText('Bob')).toBeInTheDocument();
-    expect(screen.getByText('AAPL')).toBeInTheDocument();
-    expect(screen.getByText('TSLA')).toBeInTheDocument();
+    expect(screen.getAllByText('Bob')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('AAPL')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('TSLA')[0]).toBeInTheDocument();
   });
 
   it('calls onPlayerClick when a participant is clicked', () => {

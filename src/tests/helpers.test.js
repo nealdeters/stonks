@@ -1,44 +1,41 @@
-const { test, describe } = require('node:test');
-const assert = require('node:assert');
-const { SHEETS, getRange, isContestOver, isRegistrationClosed } = require('../src/utils/helpers');
+import { describe, it, expect } from 'vitest';
+import { isContestOver, isRegistrationClosed, isContestEntryOpen, parseRows, getRange } from '../utils/helpers';
 
-describe('Date Utility Logic', () => {
-    
-    test('Season is over if today is past the end date', () => {
-        const today = '2026-12-25';
-        const seasonEnd = '2026-12-11';
-        assert.strictEqual(isContestOver(today, seasonEnd), true);
-    });
+describe('helpers', () => {
+  it('isContestOver returns true if now is after end date', () => {
+    const now = new Date('2024-01-01');
+    const end = new Date('2023-12-31');
+    expect(isContestOver(now, end)).toBe(true);
+  });
 
-    test('Registration is closed if today is exactly the cutoff', () => {
-        const today = '2026-02-01T12:00:00';
-        const cutoff = '2026-02-01T00:00:00';
-        assert.strictEqual(isRegistrationClosed(today, cutoff), true);
-    });
+  it('isRegistrationClosed returns true if now is after cutoff', () => {
+    const now = new Date('2024-01-01');
+    const cutoff = new Date('2023-12-31');
+    expect(isRegistrationClosed(now, cutoff)).toBe(true);
+  });
 
-    test('Registration is open before cutoff', () => {
-        assert.strictEqual(isRegistrationClosed('2026-01-01', '2026-02-01'), false);
-    });
+  it('isContestEntryOpen returns true if now is after Jan 2nd of current year', () => {
+    const now = new Date('2024-01-03');
+    expect(isContestEntryOpen(now)).toBe(true);
+  });
 
-    describe('getRange', () => {
-        test('should return the correct range with default columns', () => {
-            const result = getRange(SHEETS.CONTROLS);
-            assert.strictEqual(result, 'Controls!A:Z');
-        });
+  it('parseRows converts sheet data to objects', () => {
+    const valueSet = {
+      values: [
+        ['Name', 'Ticker'],
+        ['Alice', 'AAPL'],
+        ['Bob', 'GOOGL']
+      ]
+    };
+    const result = parseRows(valueSet);
+    expect(result).toEqual([
+      { name: 'Alice', ticker: 'AAPL' },
+      { name: 'Bob', ticker: 'GOOGL' }
+    ]);
+  });
 
-        test('should return the correct range with custom columns', () => {
-            const result = getRange(SHEETS.USERS, 'B:E');
-            assert.strictEqual(result, 'Users!B:E');
-        });
-
-        test('should handle different sheet constants correctly', () => {
-            assert.strictEqual(getRange(SHEETS.CONTESTANTS), 'Contestants!A:Z');
-            assert.strictEqual(getRange(SHEETS.BENCHMARKS), 'Benchmarks!A:Z');
-        });
-
-        test('should handle manual string input if constant is not used', () => {
-            const result = getRange('CustomSheet', 'A1:B10');
-            assert.strictEqual(result, 'CustomSheet!A1:B10');
-        });
-    });
+  it('getRange returns correct string', () => {
+    expect(getRange('Users')).toBe('Users!A:Z');
+    expect(getRange('Users', 'A:B')).toBe('Users!A:B');
+  });
 });

@@ -1,12 +1,17 @@
-const { test, describe, before, beforeEach } = require('node:test');
-const assert = require('node:assert');
-const fs = require('fs');
-const googleAuth = require('google-auth-library');
-const googleSheets = require('@googleapis/sheets');
-const resendModule = require('resend');
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
+import fs from 'fs';
+import googleSheets from '@googleapis/sheets';
+import { Resend } from 'resend';
+import { run } from '../../scripts/send-report.js';
+
+vi.mock('@googleapis/sheets');
+vi.mock('resend', () => ({
+    Resend: vi.fn()
+}));
+vi.mock('fs');
 
 describe('Weekly Report Script', () => {
-    before(() => {
+    beforeAll(() => {
         process.env.RESEND_API_KEY = 're_test_123';
         process.env.SHEET_ID = 'test_sheet_id';
         process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL = 'test@test.com';
@@ -15,18 +20,13 @@ describe('Weekly Report Script', () => {
 
     beforeEach(() => {
         process.argv = ['node', 'scripts/send-report.js'];
-        delete require.cache[require.resolve('../scripts/send-report.js')];
+        vi.clearAllMocks();
     });
 
-    test('Sends report to manual recipients using --to flag', async (t) => {
+    it('Sends report to manual recipients using --to flag', async () => {
         process.argv.push('--to=neal@test.com');
 
-        const originalJWT = googleAuth.JWT;
-        googleAuth.JWT = function() {
-            return { authorize: async () => ({}) };
-        };
-
-        t.mock.method(googleSheets, 'sheets', () => ({
+        vi.mocked(googleSheets.sheets).mockReturnValue({
             spreadsheets: {
                 values: {
                     get: async () => ({
@@ -34,34 +34,24 @@ describe('Weekly Report Script', () => {
                     })
                 }
             }
-        }));
-
-        const originalReadFileSync = fs.readFileSync;
-        t.mock.method(fs, 'readFileSync', (path, options) => {
-            if (path.toString().includes('leaderboard')) {
-                return Buffer.from('fake-base64-content');
-            }
-            return originalReadFileSync(path, options);
         });
 
-        t.mock.method(fs, 'readdirSync', () => ['leaderboard.png']);
-        t.mock.method(fs, 'statSync', () => ({ mtime: { getTime: () => Date.now() } }));
+        vi.mocked(fs.readFileSync).mockImplementation((path) => {
+            if (path.includes('leaderboard')) return Buffer.from('fake-base64-content');
+            return Buffer.from('');
+        });
 
-        const sendSpy = t.mock.fn(async () => ({ data: { id: 'ok' } }));
-        const originalResend = resendModule.Resend;
-        resendModule.Resend = function() {
-            return { emails: { send: sendSpy } };
-        };
+        vi.mocked(fs.readdirSync).mockReturnValue(['leaderboard.png']);
+        vi.mocked(fs.statSync).mockReturnValue({ mtime: { getTime: () => Date.now() } });
 
-        try {
-            const { run } = require('../scripts/send-report.js');
-            await run();
+        const sendSpy = vi.fn().mockResolvedValue({ data: { id: 'ok' } });
+        vi.mocked(Resend).mockImplementation(() => ({
+            emails: { send: sendSpy }
+        }));
 
-            assert.strictEqual(sendSpy.mock.callCount(), 1, "The email send function was not called");
-            assert.deepStrictEqual(sendSpy.mock.calls[0].arguments[0].to, ['neal@test.com']);
-        } finally {
-            googleAuth.JWT = originalJWT;
-            resendModule.Resend = originalResend;
-        }
+        await run();
+
+        expect(sendSpy).toHaveBeenCalledTimes(1);
+        expect(sendSpy.mock.calls[0][0].to).toEqual(['neal@test.com']);
     });
 });
