@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { getThemeForDate } from '../utils/theme';
+import iconDefault from '../../icon.png';
+import iconDec from '../../icon-dec-512.png';
+import iconNov from '../../icon-nov.png';
+import iconSummer from '../../icon-summer-512.png';
 
 describe('getThemeForDate', () => {
   it('should return default theme for January', () => {
@@ -7,7 +11,7 @@ describe('getThemeForDate', () => {
     expect(getThemeForDate(date)).toEqual({
       color: 'indigo',
       icon: '🏆',
-      logo: 'icon.png'
+      logo: iconDefault
     });
   });
 
@@ -16,7 +20,7 @@ describe('getThemeForDate', () => {
     expect(getThemeForDate(date)).toEqual({
       color: 'emerald',
       icon: '🎄',
-      logo: 'icon-dec-512.png'
+      logo: iconDec
     });
   });
 
@@ -25,7 +29,7 @@ describe('getThemeForDate', () => {
     expect(getThemeForDate(date)).toEqual({
       color: 'orange',
       icon: '🦃',
-      logo: 'icon-nov.png'
+      logo: iconNov
     });
   });
 
@@ -36,7 +40,7 @@ describe('getThemeForDate', () => {
       expect(getThemeForDate(date)).toEqual({
         color: 'indigo',
         icon: '🏆',
-        logo: 'icon-summer-512.png'
+        logo: iconSummer
       });
     });
   });

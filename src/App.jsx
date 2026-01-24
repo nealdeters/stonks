@@ -41,12 +41,7 @@ export default function App() {
   });
   const [isSyncing, setIsSyncing] = useState(false);
   const [viewParams, setViewParams] = useState({});
-  const [theme, setTheme] = useState({ color: 'indigo', icon: '🏆', logo: 'icon.png' });
-
-  useEffect(() => {
-    // Theme Logic
-    setTheme(getThemeForDate(new Date()));
-  }, []);
+  const [theme, setTheme] = useState(getThemeForDate(new Date()));
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
