@@ -8,6 +8,7 @@ import NewsView from './News';
 import Stats from './Stats';
 import HallOfFame from './HallOfFame';
 import { getStonksData } from './api';
+import { getThemeForDate } from './utils/theme';
 
 const Ticker = ({ prices, theme }) => {
   if (!prices || prices.length === 0) return null;
@@ -40,23 +41,11 @@ export default function App() {
   });
   const [isSyncing, setIsSyncing] = useState(false);
   const [viewParams, setViewParams] = useState({});
-  const [theme, setTheme] = useState({ color: 'indigo', icon: '🏆' });
+  const [theme, setTheme] = useState({ color: 'indigo', icon: '🏆', logo: 'icon.png' });
 
   useEffect(() => {
     // Theme Logic
-    const month = new Date().getMonth();
-    let color = 'indigo';
-    let icon = '🏆';
-    
-    if (month === 11) { // December
-        color = 'emerald';
-        icon = '🎄';
-    } else if (month === 10) { // November
-        color = 'orange';
-        icon = '🦃';
-    }
-    
-    setTheme({ color, icon });
+    setTheme(getThemeForDate(new Date()));
   }, []);
 
   useEffect(() => {
@@ -188,7 +177,7 @@ export default function App() {
       <header className="main-sticky-header sticky top-0 z-30 bg-[#020617]/80 backdrop-blur-md border-b border-indigo-500/10 flex flex-col">
         <div className="max-w-7xl mx-auto px-4 md:px-8 flex justify-between items-center w-full py-4">
             <div className="flex header-branding items-center gap-6 shrink-0 cursor-pointer" onClick={() => navigate('leaderboard')}>
-                <img src="icon.png" alt="Stonks Logo" className="h-14 w-14 object-contain shrink-0 rounded-2xl" />
+                <img src={theme.logo} alt="Stonks Logo" className="h-14 w-14 object-contain shrink-0 rounded-2xl" />
                 <div className="flex flex-col items-center md:items-start shrink-0">
                     <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-cyan-400 uppercase leading-none text-center md:text-left">
                         {data.sheetData?.controls?.title || 'Stonks'}
