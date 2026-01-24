@@ -37,34 +37,22 @@ main {
 
 /* SECONDARY STICKY: Table Headers */
 @media (min-width: 768px) {
-    #leaderboard-table thead th,
-    #performers-table thead th,
-    #stats-table thead th,
-    #portfolio-table thead th,
-    #history-table thead th {
+    .stonks-table thead th {
         position: sticky;
-        top: 111px; 
+        top: 133px; 
         z-index: 50;
         background-color: #020617; 
-        padding-top: 3rem;
+        padding-top: 1.5rem;
         padding-bottom: 1.5rem;
         box-shadow: 0 1px 0 rgba(99, 102, 241, 0.2);
     }
-
-    #leaderboard-table thead th:first-child,
-    #performers-table thead th:first-child,
-    #stats-table thead th:first-child,
-    #portfolio-table thead th:first-child,
-    #history-table thead th:first-child { border-top-left-radius: 2.5rem; }
-    #leaderboard-table thead th:last-child,
-    #performers-table thead th:last-child,
-    #stats-table thead th:last-child,
-    #portfolio-table thead th:last-child,
-    #history-table thead th:last-child { border-top-right-radius: 2.5rem; }
+    
+    .stonks-table thead th:first-child { border-top-left-radius: 2.5rem; }
+    .stonks-table thead th:last-child { border-top-right-radius: 2.5rem; }
 }
 
-/* Sticky Footer Base Styling */
-.sticky-footer {
+/* Footer Base Styling - Pushed to bottom via flexbox */
+.footer-container {
     flex-shrink: 0;
     width: 100%;
     background-color: rgba(2, 6, 23, 0.8);
@@ -93,6 +81,7 @@ main {
         gap: 1rem;
     }
     #market-status { margin: 0 auto; }
+    .header-branding > div { align-items: center; text-align: center; }
 }
 
 /* Secondary Button Style */
@@ -107,4 +96,18 @@ main {
     background-color: rgba(99, 102, 241, 0.15);
     border-color: rgba(99, 102, 241, 0.4);
     color: #fff;
+}
+
+/* Ticker Animation */
+@keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+.animate-marquee {
+    animation: marquee 60s linear infinite;
+    display: inline-block;
+    white-space: nowrap;
+}
+.animate-marquee:hover {
+    animation-play-state: paused;
 }

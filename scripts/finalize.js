@@ -1,107 +1,105 @@
-const { JWT } = require('google-auth-library');
-const googleSheets = require('@googleapis/sheets');
-const axios = require('axios');
-const { SHEETS, getRange, isContestOver } = require('../src/utils/helpers');
+import { google } from 'googleapis';
+import axios from 'axios';
+import 'dotenv/config';
+import { SHEETS, getRange, parseRows } from '../src/utils/helpers.js';
 
-async function run(injectedSheets = null) {
-    const GOOGLE_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-    const rawKey = process.env.GOOGLE_PRIVATE_KEY;
-    const GOOGLE_KEY = rawKey ? rawKey.replace(/\\n/g, '\n') : null;
-    const API_KEY = process.env.FINNHUB_KEY;
-    const sheetId = process.env.SHEET_ID;
+export async function run(sheetsOverride) {
+  const auth = new google.auth.GoogleAuth({
+    credentials: {
+      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    },
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  });
 
-    let sheets;
-    if (injectedSheets) {
-        sheets = injectedSheets;
-    } else {
-        const auth = new JWT({
-            email: GOOGLE_EMAIL,
-            key: GOOGLE_KEY,
-            scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-        });
-        sheets = googleSheets.sheets({ version: 'v4', auth });
-    }
+  const sheets = sheetsOverride || google.sheets({ version: 'v4', auth });
+  const spreadsheetId = process.env.SHEET_ID;
+  const apiKey = process.env.FINNHUB_KEY;
 
-    try {
-        const controlsRes = await sheets.spreadsheets.values.get({
-            spreadsheetId: sheetId,
-            range: getRange(SHEETS.CONTROLS)
-        });
-        const controlRows = controlsRes?.data?.values || [];
-        const endDate = controlRows[1][controlRows[0].map(h => h.toLowerCase()).indexOf('end')];
+  const controlsRes = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: getRange(SHEETS.CONTROLS),
+  });
+  
+  const controls = parseRows(controlsRes.data)[0];
+  if (!controls || !controls.end) {
+      console.error("No end date found in Controls.");
+      return;
+  }
 
-        if (!endDate || !isContestOver(new Date(), endDate)) {
-            console.log("Contest active. Skipping.");
-            return;
-        }
+  const endDate = new Date(controls.end);
+  const today = new Date();
 
-        const contestantsRes = await sheets.spreadsheets.values.get({
-            spreadsheetId: sheetId,
-            range: getRange(SHEETS.CONTESTANTS)
-        });
-        const rows = contestantsRes?.data?.values || [];
-        if (rows.length <= 1) return;
+  endDate.setHours(0,0,0,0);
+  today.setHours(0,0,0,0);
 
-        const headers = rows[0].map(h => h.toLowerCase().trim());
-        const rawData = rows.slice(1).map(row => {
-            const get = (col) => row[headers.indexOf(col)] || '';
-            return {
-                user_uuid: get('user_uuid'),
-                name: get('name'),
-                ticker: get('ticker'),
-                capital: parseFloat(get('capital')),
-                cost: parseFloat(get('cost')),
-                shares: parseFloat(get('shares'))
-            };
-        });
+  if (today < endDate) {
+    console.log(`Contest is still active (Ends: ${endDate.toDateString()}). Skipping archival.`);
+    return;
+  }
 
-        console.log("Fetching final market prices...");
-        const finalResults = await Promise.all(rawData.map(async (p) => {
-            const priceRes = await axios.get(`https://finnhub.io/api/v1/quote?symbol=${p.ticker}&token=${API_KEY}`);
-            const finalPrice = priceRes.data.c;
-            
-            const currentMarketValue = finalPrice * p.shares;
-            const gainPercentage = ((currentMarketValue - p.capital) / p.capital) * 100;
-            
-            return { ...p, finalPrice, gainPercentage };
-        }));
+  console.log("Contest ended. Archiving results and resetting board...");
 
-        const sorted = finalResults.sort((a, b) => b.gainPercentage - a.gainPercentage);
+  const contestantsRes = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: getRange(SHEETS.CONTESTANTS)
+  });
+  const contestants = parseRows(contestantsRes.data);
 
-        const archiveRows = sorted.map((p, index) => [
-            p.user_uuid,
-            p.name,
-            p.ticker,
-            p.capital,
-            p.cost,
-            p.shares,
-            p.finalPrice,
-            `${p.gainPercentage.toFixed(2)}%`,
-            index + 1,
-            new Date().getFullYear().toString()
-        ]);
+  if (contestants.length === 0) {
+      console.log("No contestants to archive.");
+      return;
+  }
 
-        await sheets.spreadsheets.values.append({
-            spreadsheetId: sheetId,
-            range: `${SHEETS.RECORDS}!A1`,
-            valueInputOption: 'USER_ENTERED',
-            resource: { values: archiveRows }
-        });
+  console.log(`Fetching final market prices for ${contestants.length} contestants...`);
+  
+  const finalResults = await Promise.all(contestants.map(async (p) => {
+      let finalPrice = 0;
+      try {
+        const priceRes = await axios.get(`https://finnhub.io/api/v1/quote?symbol=${p.ticker}&token=${apiKey}`);
+        finalPrice = priceRes.data.c || 0;
+      } catch (err) {
+          console.error(`Failed to fetch price for ${p.ticker}: ${err.message}`);
+      }
+      
+      const capital = parseFloat(p.capital) || 0;
+      const shares = parseFloat(p.shares) || 0;
+      const currentMarketValue = finalPrice * shares;
+      const gainPercentage = capital > 0 ? ((currentMarketValue - capital) / capital) * 100 : 0;
+      
+      return { ...p, finalPrice, gainPercentage, capital, cost: parseFloat(p.cost), shares };
+  }));
 
-        await sheets.spreadsheets.values.clear({
-            spreadsheetId: sheetId,
-            range: `${SHEETS.CONTESTANTS}!A2:J100` 
-        });
+  const sorted = finalResults.sort((a, b) => b.gainPercentage - a.gainPercentage);
 
-        console.log(`Finalized: ${archiveRows.length} contestants archived.`);
-    } catch (err) {
-        console.error("Finalization failed:", err.message);
-        if (!injectedSheets) process.exit(1);
-        throw err;
-    }
+  const archiveRows = sorted.map((p, index) => [
+      p.user_uuid,
+      p.name,
+      p.ticker,
+      p.capital,
+      p.cost,
+      p.shares,
+      p.finalPrice,
+      `${p.gainPercentage.toFixed(2)}%`,
+      index + 1,
+      new Date().getFullYear().toString()
+  ]);
+
+  await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: getRange(SHEETS.RECORDS),
+      valueInputOption: 'USER_ENTERED',
+      resource: { values: archiveRows }
+  });
+
+  await sheets.spreadsheets.values.clear({
+      spreadsheetId,
+      range: `${SHEETS.CONTESTANTS}!A2:Z` 
+  });
+
+  console.log(`Finalized: ${archiveRows.length} contestants archived.`);
 }
 
-if (require.main === module) {
-    run().catch(() => process.exit(1));
+if (process.argv[1]?.includes('finalize.js')) {
+  run().catch(console.error);
 }
-module.exports = { run };

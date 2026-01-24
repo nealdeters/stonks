@@ -1,11 +1,11 @@
-const { Resend } = require('resend');
-const { JWT } = require('google-auth-library');
-const googleSheets = require('@googleapis/sheets');
-const fs = require('fs');
-const path = require('path');
-const { SHEETS, getRange, isContestOver } = require('../src/utils/helpers');
+import { Resend } from 'resend';
+import { JWT } from 'google-auth-library';
+import googleSheets from '@googleapis/sheets';
+import fs from 'fs';
+import path from 'path';
+import { SHEETS, getRange, isContestOver } from '../src/utils/helpers.js';
 
-async function run() {
+export async function run() {
     const force = process.argv.includes('--force');
     const manualToArg = process.argv.find(arg => arg.startsWith('--to='));
     let recipients = [];
@@ -89,15 +89,9 @@ async function run() {
         console.log(`Report sent to ${recipients.length} recipients.`);
     } catch (err) {
         console.error("Script failed:", err.message);
-        if (require.main === module) {
-            process.exit(1);
-        } else {
-            throw err;
-        }
     }
 }
 
-if (require.main === module) {
+if (process.argv[1]?.includes('send-report.js')) {
     run();
 }
-module.exports = { run };

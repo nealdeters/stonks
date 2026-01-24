@@ -1,9 +1,12 @@
-const axios = require('axios');
-const { JWT } = require('google-auth-library');
-const googleSheets = require('@googleapis/sheets');
-const { SHEETS, getRange, parseRows } = require('../src/utils/helpers');
+import axios from 'axios';
+import { JWT } from 'google-auth-library';
+import * as googleSheets from '@googleapis/sheets';
+import { fileURLToPath } from 'url';
+import { SHEETS, getRange, parseRows } from '../src/utils/helpers.js';
 
-const run = async () => {
+const __filename = fileURLToPath(import.meta.url);
+
+export const run = async () => {
     const SHEET_ID = process.env.SHEET_ID;
     const API_KEY = process.env.FINNHUB_KEY;
     const FORCE = process.argv.includes('--force');
@@ -96,8 +99,6 @@ const run = async () => {
     }
 };
 
-if (require.main === module) {
+if (process.argv[1] === __filename) {
     run();
 }
-
-module.exports = { run };

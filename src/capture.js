@@ -1,8 +1,12 @@
-const puppeteer = require('puppeteer');
-const fs = require('fs');
-const path = require('path');
-const axios = require('axios');
-const { isContestOver } = require('./utils/helpers');
+import puppeteer from 'puppeteer';
+import fs from 'fs';
+import path from 'path';
+import axios from 'axios';
+import { fileURLToPath } from 'url';
+import { isContestOver } from './utils/helpers.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function checkIfContestOver() {
     try {
@@ -18,7 +22,7 @@ async function checkIfContestOver() {
     }
 }
 
-const runCapture = async () => {
+export const runCapture = async () => {
     const force = process.argv.includes('--force');
     if (!force) {
         const over = await checkIfContestOver();
@@ -58,8 +62,6 @@ const runCapture = async () => {
     await browser.close();
 };
 
-if (require.main === module) {
+if (process.argv[1] === __filename) {
     runCapture();
 }
-
-module.exports = { runCapture };
