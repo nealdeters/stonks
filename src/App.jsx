@@ -56,6 +56,25 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+  const handlePopState = () => {
+    const params = new URLSearchParams(window.location.search);
+    const viewParam = params.get('view') || 'leaderboard';
+    
+    setView(viewParam);
+    
+    const uuid = params.get('uuid');
+    const year = params.get('year');
+    setViewParams((uuid || year) ? { uuid, year } : {});
+  };
+
+  window.addEventListener('popstate', handlePopState);
+  
+  return () => {
+    window.removeEventListener('popstate', handlePopState);
+  };
+}, []);
+
   const navigate = (newView, params = {}) => {
     setView(newView);
     setViewParams(params);
