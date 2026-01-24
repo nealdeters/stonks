@@ -8,44 +8,41 @@ const HEADERS = { "Content-Type": "application/json", "Access-Control-Allow-Orig
 const INVESTMENT = 5000;
 
 export const handler = async (event) => {
-    let formData;
     try {
+        let formData;
         if (event.isBase64Encoded) {
             formData = Object.fromEntries(new URLSearchParams(Buffer.from(event.body, 'base64').toString()));
         } else {
             formData = JSON.parse(event.body);
         }
-    } catch (e) {
-        formData = Object.fromEntries(new URLSearchParams(event.body));
-    }
 
-    const { name, email, ticker, secret } = formData;
-    
-    const SHEET_ID = process.env.SHEET_ID;
-    const APP_SECRET = process.env.APP_SECRET;
+        const { name, email, ticker, secret } = formData;
+        
+        const SHEET_ID = process.env.SHEET_ID;
+        const APP_SECRET = process.env.APP_SECRET;
 
-    const auth = new JWT({
-        email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
+        if (!secret || secret !== APP_SECRET) {
+            return { 
+                statusCode: 422, 
+                headers: HEADERS, 
+                body: JSON.stringify({ error: "Invalid Secret" }) 
+            };
+        }
 
-    if (!secret || secret !== APP_SECRET) {
-        return { 
-            statusCode: 422, 
-            headers: HEADERS, 
-            body: JSON.stringify({ error: "Invalid Secret" }) 
-        };
-    }
+        // Initialize Auth inside try/catch to handle missing env vars gracefully
+        const auth = new JWT({
+            email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+            key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+            scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+        });
 
-    const sheets = googleSheets.sheets({ version: 'v4', auth });
-    const ranges = [
-        getRange(SHEETS.USERS),
-        getRange(SHEETS.CONTESTANTS),
-        getRange(SHEETS.CONTROLS),
-    ];
+        const sheets = googleSheets.sheets({ version: 'v4', auth });
+        const ranges = [
+            getRange(SHEETS.USERS),
+            getRange(SHEETS.CONTESTANTS),
+            getRange(SHEETS.CONTROLS),
+        ];
 
-    try {
         const data = await sheets.spreadsheets.values.batchGet({
             spreadsheetId: SHEET_ID,
             ranges: ranges

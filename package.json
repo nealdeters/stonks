@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "test:bundled": "node scripts/serve-bundled.js"
   },
   "dependencies": {
     "@netlify/functions": "^2.6.0",
