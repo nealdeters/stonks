@@ -141,6 +141,8 @@ export const handler = async (event) => {
             resource: { values: [[userUuid, name, email, ticker.toUpperCase(), INVESTMENT, price, shares]] }
         });
 
+        axios.get(`${process.env.SITE_URL}/.netlify/functions/sync-stock-data`)
+
         return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ message: "Entry Recorded" }) };
     } catch (err) {
         return { statusCode: 500, headers: HEADERS, body: JSON.stringify({ error: err.message }) };
