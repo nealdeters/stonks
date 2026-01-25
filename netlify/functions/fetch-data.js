@@ -35,7 +35,7 @@ export const handler = async () => {
 
         return { 
             statusCode: 200, 
-            headers: { ...HEADERS, "Cache-Control": "public, max-age=60, s-maxage=60" }, 
+            headers: { ...HEADERS, "Cache-Control": "public, max-age=0, must-revalidate" }, 
             body: JSON.stringify(data) || "{}"
         };
     } catch (err) {

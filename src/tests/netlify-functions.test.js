@@ -24,8 +24,8 @@ vi.mock('google-auth-library', () => ({
 }));
 
 // Import the functions under test
-import { syncStockData } from '../../netlify/functions/sync-stock-data.js';
-import { syncNews } from '../../netlify/functions/sync-news.js';
+import { syncStockData } from '../../netlify/lib/stock-data.js';
+import { syncNews } from '../../netlify/lib/news.js';
 
 describe('Netlify Functions Error Handling', () => {
     const originalEnv = process.env;
