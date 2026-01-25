@@ -50,7 +50,8 @@ describe('process-entry function', () => {
             APP_SECRET: 'secret123',
             FINNHUB_KEY: 'finnhub-key',
             GOOGLE_SERVICE_ACCOUNT_EMAIL: 'test@test.com',
-            GOOGLE_PRIVATE_KEY: 'private-key'
+            GOOGLE_PRIVATE_KEY: 'private-key',
+            SITE_URL: 'https://stonks.test'
         };
         vi.clearAllMocks();
         
@@ -107,14 +108,18 @@ describe('process-entry function', () => {
             ]}
         });
 
-        // Mock Finnhub
-        vi.mocked(axios.get).mockResolvedValue({
-            data: { c: 150, t: Math.floor(Date.now() / 1000) }
+        // Mock Finnhub and Sync call
+        vi.mocked(axios.get).mockImplementation(async (url) => {
+            if (url.includes('finnhub')) {
+                return { data: { c: 150, t: Math.floor(Date.now() / 1000) } };
+            }
+            return { status: 200 };
         });
 
         const result = await handler(event);
         
         expect(result.statusCode).toBe(200);
         expect(mockAppend).toHaveBeenCalledTimes(2); // Once for User, Once for Contestant
+        expect(axios.get).toHaveBeenCalledWith(expect.stringContaining('manual-dispatch?task=sync-stock'), { timeout: 9000 });
     });
 });
