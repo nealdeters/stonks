@@ -1,22 +1,22 @@
 /**
  * Market Data Provider Factory
  * Creates and manages market data provider adapters
- * Supports runtime switching between providers
+ * Supports chained fallback: tries providers in order until one succeeds
  */
 import FinnhubAdapter from './finnhub-adapter.js';
 import AllTickAdapter from './alltick-adapter.js';
+import YahooFinanceAdapter from './yahoo-adapter.js';
 
 class ProviderFactory {
   constructor(config = {}) {
     this.config = config;
     this.providers = new Map();
-    this.currentProvider = null;
-    this.fallbackProvider = null;
+    this.providerChain = [];
   }
 
   /**
    * Create a provider adapter instance
-   * @param {string} type - Provider type ('finnhub', 'alltick')
+   * @param {string} type - Provider type ('finnhub', 'alltick', 'yahoo')
    * @param {Object} config - Provider-specific configuration
    * @returns {Object} Provider adapter instance
    */
@@ -36,8 +36,14 @@ class ProviderFactory {
           ...config
         });
 
+      case 'yahoo':
+        return new YahooFinanceAdapter({
+          timeout: config.timeout || 8000,
+          ...config
+        });
+
       default:
-        throw new Error(`Unknown provider type: ${type}. Supported: finnhub, alltick`);
+        throw new Error(`Unknown provider type: ${type}. Supported: finnhub, alltick, yahoo`);
     }
   }
 
@@ -48,106 +54,107 @@ class ProviderFactory {
   initialize(config) {
     this.config = { ...this.config, ...config };
     
-    // Set current provider
-    const primaryProvider = this.config.marketDataProvider || 'finnhub';
-    this.setProvider(primaryProvider);
-
-    // Set fallback provider if configured
-    if (this.config.fallbackProvider) {
-      this.setFallbackProvider(this.config.fallbackProvider);
-    }
+    // Set up provider chain: yahoo -> finnhub -> alltick
+    const chain = config.providerChain || ['yahoo', 'finnhub', 'alltick'];
+    this.setProviderChain(chain);
   }
 
   /**
-   * Set the current provider
-   * @param {string} type - Provider type
+   * Set the provider chain order
+   * @param {Array<string>} chain - Array of provider types in priority order
    */
-  setProvider(type) {
-    try {
-      if (this.providers.has(type)) {
-        this.currentProvider = this.providers.get(type);
-      } else {
+  setProviderChain(chain) {
+    this.providerChain = [];
+    
+    for (const type of chain) {
+      try {
         const provider = ProviderFactory.createProvider(type, this.config);
         this.providers.set(type, provider);
-        this.currentProvider = provider;
-      }
-      
-      console.log(`[ProviderFactory] Switched to ${type} provider`);
-    } catch (error) {
-      console.error(`[ProviderFactory] Failed to set provider ${type}:`, error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * Set fallback provider (lazy init - only creates when actually used)
-   * @param {string} type - Provider type
-   */
-  setFallbackProvider(type) {
-    // Store the type for lazy initialization
-    this.fallbackProviderType = type;
-    console.log(`[ProviderFactory] Set fallback provider: ${type} (lazy init)`);
-  }
-
-  /**
-   * Get fallback provider, creating it lazily if needed
-   * @returns {Object|null} Fallback provider or null
-   */
-  getFallbackProvider() {
-    if (!this.fallbackProviderType) return null;
-    
-    if (!this.fallbackProvider) {
-      try {
-        this.fallbackProvider = ProviderFactory.createProvider(this.fallbackProviderType, this.config);
-        console.log(`[ProviderFactory] Created fallback provider: ${this.fallbackProviderType}`);
+        this.providerChain.push(provider);
+        console.log(`[ProviderFactory] Added ${type} to provider chain`);
       } catch (error) {
-        console.error(`[ProviderFactory] Failed to create fallback provider ${this.fallbackProviderType}:`, error.message);
-        return null;
+        console.warn(`[ProviderFactory] Skipping unavailable provider ${type}:`, error.message);
       }
     }
     
-    return this.fallbackProvider;
+    if (this.providerChain.length === 0) {
+      throw new Error('No providers available in chain');
+    }
   }
 
   /**
-   * Get current provider instance
-   * @returns {Object} Current provider adapter
+   * Get the primary (first) provider
+   * @returns {Object} Primary provider adapter
    */
   getProvider() {
-    if (!this.currentProvider) {
-      throw new Error('No provider configured. Call initialize() first.');
-    }
-    return this.currentProvider;
+    return this.providerChain[0];
   }
 
   /**
-   * Execute a function with automatic fallback
-   * @param {Function} operation - Async function to execute
+   * Get all providers in chain
+   * @returns {Array<Object>} Array of provider adapters
+   */
+  getProviderChain() {
+    return this.providerChain;
+  }
+
+  /**
+   * Execute operation with chained fallback
+   * Tries each provider in order until one succeeds
+   * @param {Function} operation - Async function to execute (provider => result)
    * @param {string} operationName - Name for logging
    * @returns {Promise<any>} Operation result
    */
-  async executeWithFallback(operation, operationName = 'operation') {
-    const provider = this.getProvider();
+  async executeWithChain(operation, operationName = 'operation') {
+    const errors = [];
     
-    try {
-      return await operation(provider);
-    } catch (error) {
-      console.error(`[ProviderFactory] ${operationName} failed with ${provider.providerName}:`, error.message);
-      
-      // Try fallback provider if available
-      if (this.fallbackProvider && this.fallbackProvider !== provider) {
-        console.log(`[ProviderFactory] Trying fallback provider: ${this.fallbackProvider.providerName}`);
+    for (const provider of this.providerChain) {
+      try {
+        console.log(`[ProviderFactory] Trying ${provider.providerName}...`);
+        const result = await operation(provider);
         
-        try {
-          return await operation(this.fallbackProvider);
-        } catch (fallbackError) {
-          console.error(`[ProviderFactory] Fallback provider also failed:`, fallbackError.message);
-          throw fallbackError;
+        // Debug: log result structure
+        if (Array.isArray(result)) {
+          console.log(`[ProviderFactory] ${provider.providerName} returned ${result.length} items, first item:`, JSON.stringify(result[0]));
+        } else {
+          console.log(`[ProviderFactory] ${provider.providerName} returned:`, JSON.stringify(result));
         }
+        
+        // Check if result has valid data
+        const hasValidData = this.checkResultValidity(result);
+        if (hasValidData) {
+          console.log(`[ProviderFactory] Success with ${provider.providerName}`);
+          return result;
+        }
+        
+        console.log(`[ProviderFactory] ${provider.providerName} returned no valid data, trying next...`);
+        errors.push({ provider: provider.providerName, error: 'No data returned' });
+        
+      } catch (error) {
+        console.error(`[ProviderFactory] ${provider.providerName} failed:`, error.message);
+        errors.push({ provider: provider.providerName, error: error.message });
       }
-      
-      throw error;
     }
+    
+    // All providers failed
+    throw new Error(`All providers failed: ${errors.map(e => `${e.provider}: ${e.error}`).join('; ')}`);
+  }
+
+  /**
+   * Check if result has valid data
+   */
+  checkResultValidity(result) {
+    if (!result) return false;
+    
+    if (Array.isArray(result)) {
+      if (result.length === 0) return false;
+      // Check if at least one item has meaningful data
+      return result.some(r => r && !r.error && r.price > 0 && r.ticker);
+    }
+    if (result && typeof result === 'object') {
+      return !result.error && result.price > 0 && result.ticker;
+    }
+    return false;
   }
 
   /**
@@ -157,13 +164,13 @@ class ProviderFactory {
   async testProviders() {
     const results = {};
     
-    for (const [name, provider] of this.providers) {
+    for (const provider of this.providerChain) {
       try {
-        results[name] = await provider.test();
+        results[provider.providerName] = await provider.test();
       } catch (error) {
-        results[name] = {
+        results[provider.providerName] = {
           success: false,
-          provider: name,
+          provider: provider.providerName,
           error: error.message,
           timestamp: Date.now()
         };
@@ -178,63 +185,57 @@ class ProviderFactory {
    * @returns {Object} Provider health information
    */
   getProviderHealth() {
-    const current = this.currentProvider;
-    const fallback = this.fallbackProvider;
-    
     return {
-      currentProvider: current ? current.providerName : null,
-      fallbackProvider: fallback ? fallback.providerName : null,
-      availableProviders: Array.from(this.providers.keys()),
-      totalProviders: this.providers.size,
+      primaryProvider: this.providerChain[0]?.providerName || null,
+      providerChain: this.providerChain.map(p => p.providerName),
+      availableProviders: this.providerChain.length,
       timestamp: Date.now()
     };
   }
 
   /**
-   * Convenience method: get quote with fallback
+   * Convenience method: get quote with chain fallback
    * @param {string} ticker - Ticker symbol
    * @returns {Promise<Object>} Price data
    */
   async getQuote(ticker) {
-    return this.executeWithFallback(
+    return this.executeWithChain(
       provider => provider.getQuote(ticker),
       `getQuote(${ticker})`
     );
   }
 
   /**
-   * Convenience method: get market status with fallback
+   * Convenience method: get market status
+   * Uses primary provider only (no chain fallback needed for status)
    * @param {string} exchange - Exchange code
    * @returns {Promise<Object>} Market status
    */
   async getMarketStatus(exchange = 'US') {
-    return this.executeWithFallback(
-      provider => provider.getMarketStatus(exchange),
-      `getMarketStatus(${exchange})`
-    );
+    return this.getProvider().getMarketStatus(exchange);
   }
 
   /**
-   * Convenience method: get quotes with fallback
+   * Convenience method: get quotes with chain fallback
    * @param {Array<string>} tickers - Array of tickers
    * @returns {Promise<Array<Object>>} Array of price data
    */
   async getQuotes(tickers) {
-    return this.executeWithFallback(
+    return this.executeWithChain(
       provider => provider.getQuotes(tickers),
       `getQuotes(${tickers.length} tickers)`
     );
   }
 
   /**
-   * Convenience method: get company news with fallback
+   * Convenience method: get company news with chain fallback
    * @param {string} ticker - Ticker symbol
    * @param {string} fromDate - Start date
    * @param {string} toDate - End date
    * @returns {Promise<Array<Object>>} Array of news articles
    */
   async getCompanyNews(ticker, fromDate, toDate) {
-    return this.executeWithFallback(
+    return this.executeWithChain(
       provider => provider.getCompanyNews(ticker, fromDate, toDate),
       `getCompanyNews(${ticker}, ${fromDate}, ${toDate})`
     );

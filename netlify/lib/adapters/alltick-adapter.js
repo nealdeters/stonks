@@ -10,9 +10,26 @@ class AllTickAdapter extends MarketDataAdapter {
     super(config);
     this.providerName = 'alltick';
     this.baseUrl = 'https://quote.alltick.io';
+    this.requestQueue = [];
+    this.lastRequestTime = 0;
+    this.minRequestInterval = 250; // 4 requests per second max (250ms between requests)
     
     // Validate required configuration
     this.validateConfig({ apiKey: 'AllTick API key is required' });
+  }
+
+  /**
+   * Rate limiter: wait if needed before making request
+   */
+  async waitForRateLimit() {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    if (timeSinceLastRequest < this.minRequestInterval) {
+      await new Promise(resolve => 
+        setTimeout(resolve, this.minRequestInterval - timeSinceLastRequest)
+      );
+    }
+    this.lastRequestTime = Date.now();
   }
 
   /**
@@ -23,6 +40,9 @@ class AllTickAdapter extends MarketDataAdapter {
    */
   async getQuote(ticker) {
     try {
+      // Rate limit check before request
+      await this.waitForRateLimit();
+      
       // Determine asset type and appropriate endpoint
       const assetType = this.detectAssetType(ticker);
       const endpoint = this.getQuoteEndpoint(assetType);
@@ -56,6 +76,9 @@ class AllTickAdapter extends MarketDataAdapter {
       for (const [assetType, typeTickers] of Object.entries(grouped)) {
         const endpoint = this.getBatchQuoteEndpoint(assetType);
         
+        // Wait before batch request for rate limiting
+        await this.waitForRateLimit();
+        
         // Prepare batch request
         const requestData = this.prepareBatchQuoteRequest(typeTickers, assetType);
         const url = `${this.baseUrl}${endpoint}?token=${this.config.apiKey}`;
@@ -71,9 +94,11 @@ class AllTickAdapter extends MarketDataAdapter {
           const parsed = this.parseBatchResponse(data, typeTickers, assetType);
           results.push(...parsed);
         } catch (error) {
-          // If batch fails, fall back to individual requests
+          // If batch fails, fall back to individual requests with delay
           console.warn(`[AllTick] Batch request failed for ${assetType}, falling back to individual requests`);
           for (const ticker of typeTickers) {
+            // Add extra delay between fallback requests
+            await new Promise(resolve => setTimeout(resolve, 500));
             const quote = await this.getQuote(ticker);
             results.push(quote);
           }
@@ -83,10 +108,11 @@ class AllTickAdapter extends MarketDataAdapter {
       return results;
       
     } catch (error) {
-      // If batch completely fails, fall back to individual calls
+      // If batch completely fails, fall back to individual calls with delay
       console.warn(`[AllTick] Batch request failed completely: ${error.message}, falling back to individual requests`);
       const results = [];
       for (const ticker of tickers) {
+        await new Promise(resolve => setTimeout(resolve, 500));
         const quote = await this.getQuote(ticker);
         results.push(quote);
       }
@@ -157,6 +183,11 @@ class AllTickAdapter extends MarketDataAdapter {
         if (ticker === 'BTC') code = 'BTCUSDT';
         else if (ticker === 'ETH') code = 'ETHUSDT';
         else if (!ticker.includes('USDT')) code = `${ticker}USDT`;
+      } else if (assetType === 'stock-us') {
+        // Add .US suffix for US stocks
+        if (!ticker.includes('.')) {
+          code = `${ticker}.US`;
+        }
       }
       
       return { code };
@@ -346,6 +377,7 @@ class AllTickAdapter extends MarketDataAdapter {
    * @returns {string} Asset type (stock, crypto, forex, commodity)
    */
   detectAssetType(ticker) {
+    if (!ticker) return 'stock-us';
     const upperTicker = ticker.toUpperCase();
     
     // Crypto detection
@@ -416,6 +448,11 @@ class AllTickAdapter extends MarketDataAdapter {
       if (ticker === 'BTC') code = 'BTCUSDT';
       else if (ticker === 'ETH') code = 'ETHUSDT';
       else if (!ticker.includes('USDT')) code = `${ticker}USDT`;
+    } else if (assetType === 'stock-us') {
+      // Add .US suffix for US stocks
+      if (!ticker.includes('.')) {
+        code = `${ticker}.US`;
+      }
     }
     
     return {

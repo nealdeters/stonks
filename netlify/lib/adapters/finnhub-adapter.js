@@ -146,11 +146,18 @@ class FinnhubAdapter extends MarketDataAdapter {
    */
   async getQuotes(tickers) {
     try {
-      // Finnhub doesn't have a direct batch quote endpoint
-      // Fall back to individual requests but with better error handling
+      // First, fetch company names for US tickers
+      const symbolMap = await this.fetchSymbolNames(tickers);
+      
+      // Fetch quotes for all tickers
       const promises = tickers.map(async (ticker) => {
         try {
-          return await this.getQuote(ticker);
+          const quote = await this.getQuote(ticker);
+          // Attach company name if available
+          if (symbolMap.has(ticker)) {
+            quote.name = symbolMap.get(ticker);
+          }
+          return quote;
         } catch (error) {
           console.error(`[Finnhub] Failed to get quote for ${ticker}:`, error.message);
           return this.formatPriceResponse({ price: 0, dp: 0 }, ticker);
@@ -161,6 +168,37 @@ class FinnhubAdapter extends MarketDataAdapter {
     } catch (error) {
       return this.handleError(error, `getQuotes(${tickers.length} tickers)`);
     }
+  }
+
+  /**
+   * Fetch company names for tickers using Finnhub symbol lookup
+   * @param {Array<string>} tickers - Array of ticker symbols
+   * @returns {Promise<Map<string, string>>} Map of ticker to company name
+   */
+  async fetchSymbolNames(tickers) {
+    const symbolMap = new Map();
+    const usTickers = tickers.filter(t => !t.includes('.') && !t.includes('-'));
+    
+    if (usTickers.length === 0) return symbolMap;
+    
+    try {
+      // Fetch all US symbols and filter to our tickers
+      const url = `${this.baseUrl}/stock/symbol?exchange=US&token=${this.config.apiKey}`;
+      const data = await this.makeRequest(url);
+      
+      if (Array.isArray(data)) {
+        for (const ticker of usTickers) {
+          const match = data.find(s => s.symbol === ticker);
+          if (match?.description) {
+            symbolMap.set(ticker, match.description);
+          }
+        }
+      }
+    } catch (error) {
+      console.warn(`[Finnhub] Failed to fetch symbol names:`, error.message);
+    }
+    
+    return symbolMap;
   }
 
   /**

@@ -9,15 +9,14 @@
  */
 function getAdapterConfig() {
   const config = {
-    // Provider selection (default to finnhub for backward compatibility)
-    marketDataProvider: process.env.MARKET_DATA_PROVIDER || 'finnhub',
-    
-    // Fallback provider configuration
-    fallbackProvider: process.env.FALLBACK_PROVIDER || null,
-    enableProviderFallback: process.env.ENABLE_PROVIDER_FALLBACK === 'true',
+    // Provider chain: tried in order until one succeeds
+    // Default: yahoo -> finnhub -> alltick
+    providerChain: process.env.PROVIDER_CHAIN 
+      ? process.env.PROVIDER_CHAIN.split(',').map(p => p.trim().toLowerCase())
+      : ['yahoo', 'finnhub', 'alltick'],
     
     // Common settings
-    timeout: parseInt(process.env.PROVIDER_TIMEOUT) || 8000, // 8 seconds default
+    timeout: parseInt(process.env.PROVIDER_TIMEOUT) || 8000,
     
     // Provider-specific API keys
     finnhubKey: process.env.FINNHUB_KEY,
@@ -44,28 +43,15 @@ function getAdapterConfig() {
  * @throws {Error} If configuration is invalid
  */
 function validateConfig(config) {
-  // Validate provider selection
-  const validProviders = ['finnhub', 'alltick'];
-  if (!validProviders.includes(config.marketDataProvider)) {
-    throw new Error(`Invalid MARKET_DATA_PROVIDER: ${config.marketDataProvider}. Valid options: ${validProviders.join(', ')}`);
+  const validProviders = ['finnhub', 'alltick', 'yahoo'];
+  
+  // Validate provider chain
+  for (const provider of config.providerChain) {
+    if (!validProviders.includes(provider)) {
+      throw new Error(`Invalid provider in PROVIDER_CHAIN: ${provider}. Valid options: ${validProviders.join(', ')}`);
+    }
   }
   
-  if (config.fallbackProvider && !validProviders.includes(config.fallbackProvider)) {
-    throw new Error(`Invalid FALLBACK_PROVIDER: ${config.fallbackProvider}. Valid options: ${validProviders.join(', ')}`);
-  }
-  
-  // Validate API keys based on selected providers
-  if (config.marketDataProvider === 'finnhub' && !config.finnhubKey) {
-    throw new Error('FINNHUB_KEY is required when using finnhub provider');
-  }
-  
-  if (config.marketDataProvider === 'alltick' && !config.alltickKey) {
-    throw new Error('ALLTICK_KEY is required when using alltick provider');
-  }
-  
-  // Fallback provider key is optional - will only be used if needed
-  // (removed strict validation for fallback provider keys)
-
   // Validate timeout
   if (config.timeout < 1000 || config.timeout > 30000) {
     throw new Error(`PROVIDER_TIMEOUT must be between 1000ms and 30000ms, got: ${config.timeout}`);
@@ -101,25 +87,11 @@ function getProviderConfig(provider, baseConfig) {
 function getEnvironmentDocumentation() {
   return [
     {
-      name: 'MARKET_DATA_PROVIDER',
-      description: 'Primary market data provider (finnhub, alltick)',
-      default: 'finnhub',
+      name: 'PROVIDER_CHAIN',
+      description: 'Comma-separated list of providers in fallback order',
+      default: 'yahoo,finnhub,alltick',
       required: false,
-      example: 'alltick'
-    },
-    {
-      name: 'FALLBACK_PROVIDER',
-      description: 'Fallback provider if primary fails (finnhub, alltick)',
-      default: 'null',
-      required: false,
-      example: 'finnhub'
-    },
-    {
-      name: 'ENABLE_PROVIDER_FALLBACK',
-      description: 'Enable automatic fallback to backup provider',
-      default: 'false',
-      required: false,
-      example: 'true'
+      example: 'yahoo,finnhub,alltick'
     },
     {
       name: 'PROVIDER_TIMEOUT',
@@ -130,14 +102,14 @@ function getEnvironmentDocumentation() {
     },
     {
       name: 'FINNHUB_KEY',
-      description: 'Finnhub API key (required if using finnhub provider)',
+      description: 'Finnhub API key (optional - used if in provider chain)',
       default: 'null',
       required: 'conditional',
       example: 'your-finnhub-api-key'
     },
     {
       name: 'ALLTICK_KEY',
-      description: 'AllTick API key (required if using alltick provider)',
+      description: 'AllTick API key (optional - used if in provider chain)',
       default: 'null',
       required: 'conditional',
       example: 'your-alltick-api-key'
@@ -188,9 +160,7 @@ function createSampleEnvConfig() {
  */
 function logConfiguration(config) {
   const sanitized = {
-    marketDataProvider: config.marketDataProvider,
-    fallbackProvider: config.fallbackProvider,
-    enableProviderFallback: config.enableProviderFallback,
+    providerChain: config.providerChain,
     timeout: config.timeout,
     enableProviderLogging: config.enableProviderLogging,
     enableProviderMetrics: config.enableProviderMetrics,

@@ -1,10 +1,10 @@
 # Market Data Adapter Implementation
 
-This document describes the new adapter pattern implementation for market data providers, allowing seamless switching between Finnhub and AllTick APIs.
+This document describes the adapter pattern implementation for market data providers, supporting a chain of providers with automatic fallback.
 
 ## Overview
 
-The adapter pattern provides a unified interface for accessing market data from multiple providers while maintaining backward compatibility with the existing Finnhub implementation.
+The adapter pattern provides a unified interface for accessing market data from multiple providers. The system uses a **provider chain** - it tries each provider in order until one succeeds.
 
 ## Architecture
 
@@ -12,11 +12,11 @@ The adapter pattern provides a unified interface for accessing market data from 
 ┌─────────────────────────────────────────────────────────────┐
 │                    Provider Factory                         │
 │  ┌───────────────────────────────────────────────────────┐   │
-│  │              Market Data Adapter                      │   │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │   │
-│  │  │   Finnhub   │  │   AllTick   │  │   Future    │   │   │
-│  │  │   Adapter   │  │   Adapter   │  │  Adapters   │   │   │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘   │   │
+│  │              Provider Chain (in order)                │   │
+│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐              │   │
+│  │  │  Yahoo  │──│ Finnhub │──│ AllTick │──▶ ...      │   │
+│  │  │ (free)  │  │         │  │         │              │   │
+│  │  └─────────┘  └─────────┘  └─────────┘              │   │
 │  └───────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
                               │
@@ -31,9 +31,10 @@ The adapter pattern provides a unified interface for accessing market data from 
 ```
 netlify/lib/adapters/
 ├── base-adapter.js          # Base interface all adapters must implement
-├── finnhub-adapter.js       # Finnhub API implementation (backward compatible)
-├── alltick-adapter.js       # AllTick API implementation (unified)
-├── provider-factory.js      # Factory for creating and managing providers
+├── finnhub-adapter.js       # Finnhub API implementation
+├── alltick-adapter.js       # AllTick API implementation
+├── yahoo-adapter.js        # Yahoo Finance API (free, no key needed)
+├── provider-factory.js      # Factory for creating and managing provider chain
 └── index.js                 # Export all adapters
 
 netlify/lib/
@@ -48,15 +49,17 @@ netlify/lib/
 Add these to your `.env` file:
 
 ```bash
-# Provider Selection (NEW)
-MARKET_DATA_PROVIDER=alltick      # Options: finnhub, alltick
-FALLBACK_PROVIDER=finnhub        # Optional fallback provider
-ENABLE_PROVIDER_FALLBACK=true      # Enable automatic fallback
-PROVIDER_TIMEOUT=8000             # Request timeout in milliseconds
+# Provider Chain (order matters - tried left to right)
+# Default: yahoo,finnhub,alltick
+# Yahoo is free and used by default - no API key needed
+PROVIDER_CHAIN=yahoo,finnhub,alltick
 
-# Provider API Keys
-FINNHUB_KEY=your-finnhub-key      # Required for finnhub
-ALLTICK_KEY=your-alltick-key      # Required for alltick (get at alltick.co)
+# Request timeout in milliseconds
+PROVIDER_TIMEOUT=8000
+
+# Provider API Keys (only needed if provider is in the chain)
+FINNHUB_KEY=your-finnhub-key      # Optional
+ALLTICK_KEY=your-alltick-key      # Optional
 
 # Feature Flags
 ENABLE_PROVIDER_LOGGING=true       # Detailed logging
@@ -66,19 +69,18 @@ ENABLE_PROVIDER_METRICS=false      # Performance metrics
 ### Configuration Validation
 
 The system validates:
-- Valid provider selection (finnhub, alltick)
-- Required API keys for selected providers
+- Valid providers in chain (yahoo, finnhub, alltick)
+- Optional API keys (only required if provider is in chain)
 - Timeout values (1000-30000ms)
-- Fallback provider compatibility
 
 ## Usage
 
 ### Basic Usage
 
-The stock data service automatically uses the configured provider:
+The stock data service automatically uses the configured provider chain:
 
 ```javascript
-// No code changes needed - uses configured provider automatically
+// No code changes needed - uses chain automatically
 const result = await syncStockData(event);
 ```
 
@@ -91,24 +93,18 @@ const factory = new ProviderFactory();
 const config = getAdapterConfig();
 factory.initialize(config);
 
-// Get current provider
+// Get primary provider
 const provider = factory.getProvider();
-console.log(`Using provider: ${provider.providerName}`);
+console.log(`Primary provider: ${provider.providerName}`);
 
-// Fetch data with automatic fallback
-const quote = await factory.getQuote('TEAM');
+// Get full chain
+const chain = factory.getProviderChain();
+console.log(`Provider chain: ${chain.map(p => p.providerName).join(' → ')}`);
+
+// Fetch data - chain handles fallback automatically
+const quote = await factory.getQuote('AAPL');
 const marketStatus = await factory.getMarketStatus();
-const quotes = await factory.getQuotes(['TEAM', 'ETH', 'TUI1.DE']);
-```
-
-### Switching Providers at Runtime
-
-```javascript
-// Switch to AllTick
-factory.setProvider('alltick');
-
-// Switch back to Finnhub
-factory.setProvider('finnhub');
+const quotes = await factory.getQuotes(['AAPL', 'GOOGL', 'MSFT']);
 ```
 
 ## Data Formats
@@ -117,12 +113,12 @@ factory.setProvider('finnhub');
 
 ```javascript
 {
-  ticker: "TEAM",
+  ticker: "AAPL",
   price: 245.67,
   dp: 2.34,              // Daily percent change
-  name: "Atlassian Corp",
+  name: "Apple Inc.",
   timestamp: 1640995200,
-  provider: "alltick"    // Source tracking
+  provider: "yahoo"      // Source tracking
 }
 ```
 
@@ -133,30 +129,36 @@ factory.setProvider('finnhub');
   isOpen: true,
   holiday: null,
   exchange: "US",
-  provider: "alltick",
+  provider: "yahoo",
   timestamp: 1640995200
 }
 ```
 
 ## Provider Comparison
 
-| Feature | Finnhub | AllTick |
-|---------|---------|---------|
-| **Coverage** | US stocks, crypto | US, HK, German stocks, crypto, forex |
-| **Real-time** | ✅ | ✅ |
-| **German stocks (.DE)** | ❌ | ✅ |
-| **Unified API** | ❌ | ✅ |
-| **News data** | ✅ | ❌ |
-| **Rate limits** | 60 calls/min | Generous free tier |
-| **Cost** | Free tier | Free tier + affordable paid |
+| Feature | Yahoo | Finnhub | AllTick |
+|---------|-------|---------|---------|
+| **Coverage** | US + Intl | US stocks, crypto | US, HK, DE, crypto, forex |
+| **API Key Required** | ❌ No | ✅ Yes | ✅ Yes |
+| **Real-time** | ✅ | ✅ | ✅ |
+| **German stocks (.DE)** | ✅ | ❌ | ✅ |
+| **Batch requests** | ✅ | ❌ | ✅ |
+| **Rate limits** | Strict | 60/min | Generous |
+| **Cost** | Free | Free tier | Free tier |
 
 ## Migration Guide
 
-### Step 1: Add Configuration
+### Step 1: Update Configuration
 
-1. Copy `.env.adapter-example` to your `.env` file
-2. Add your API keys (FINNHUB_KEY and/or ALLTICK_KEY)
-3. Set MARKET_DATA_PROVIDER to your preferred provider
+No changes needed - Yahoo is the default and works without an API key:
+
+```bash
+# Default chain (recommended)
+PROVIDER_CHAIN=yahoo,finnhub,alltick
+
+# Or customize order
+PROVIDER_CHAIN=yahoo,alltick,finnhub
+```
 
 ### Step 2: Test Configuration
 
@@ -164,51 +166,51 @@ factory.setProvider('finnhub');
 # Test the adapter structure (no API calls)
 node test-adapter-structure-simple.js
 
-# Test with real API calls (requires API keys)
+# Test with real API calls
 node test-adapters.js
 ```
 
 ### Step 3: Deploy and Monitor
 
 1. Deploy your updated application
-2. Monitor the logs for provider switching messages
-3. Test fallback functionality by temporarily invalidating API keys
+2. Monitor logs for provider chain messages
+3. Test fallback by checking logs
 
-## Testing
+## How It Works
 
-### Structure Test (No API Keys Required)
-```bash
-node test-adapter-structure-simple.js
+1. **Initialization**: Factory reads `PROVIDER_CHAIN` env var
+2. **Primary Provider**: First provider in chain is used by default
+3. **Fallback**: If primary fails, next provider in chain is tried
+4. **Success**: First provider to return valid data is used
+5. **All Failed**: If all providers fail, error is logged
+
+### Example Log Output
+
 ```
-
-### Full Test (Requires API Keys)
-```bash
-node test-adapters.js
+[ProviderFactory] Added yahoo to provider chain
+[ProviderFactory] Added finnhub to provider chain
+[ProviderFactory] Added alltick to provider chain
+[ProviderFactory] Trying yahoo...
+[Yahoo] Batch request failed, falling back to individual requests
+[ProviderFactory] Success with yahoo
 ```
-
-### Test Results Interpretation
-
-- ✅ **Successful**: Provider returned valid price data
-- ❌ **Failed**: Provider returned error or zero price
-- 🏆 **Recommendation**: Best provider for your ticker list
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **"FINNHUB_KEY is required"**
-   - Add `FINNHUB_KEY=your-key` to your `.env` file
+1. **"No providers available"**
+   - Check PROVIDER_CHAIN contains valid providers
+   - Valid: yahoo, finnhub, alltick
 
-2. **"ALLTICK_KEY is required"**
-   - Add `ALLTICK_KEY=your-key` to your `.env` file
-   - Get free key at: https://alltick.co/
+2. **All providers returning errors**
+   - Check API keys if using finnhub/alltick
+   - Yahoo should work without any key
+   - Check rate limiting
 
-3. **"Invalid provider"**
-   - Use only `finnhub` or `alltick` for MARKET_DATA_PROVIDER
-
-4. **Provider fallback not working**
-   - Ensure `ENABLE_PROVIDER_FALLBACK=true`
-   - Set valid `FALLBACK_PROVIDER`
+3. **Slow responses**
+   - Reduce PROVIDER_TIMEOUT (default: 8000ms)
+   - Reorder chain - put fastest providers first
 
 ### Debug Mode
 
@@ -220,20 +222,14 @@ ENABLE_PROVIDER_LOGGING=true node your-script.js
 ## Performance Considerations
 
 - **Timeouts**: Set appropriate PROVIDER_TIMEOUT (default: 8s)
+- **Chain Order**: Put most reliable providers first
 - **Batch Requests**: Use `getQuotes()` for multiple tickers
 - **Caching**: Redis caching still applies to adapter results
-- **Fallback**: Enable fallback for production reliability
+- **Rate Limiting**: AllTick adapter includes built-in rate limiting
 
 ## Future Enhancements
 
-- **Additional Providers**: Easy to add more providers (Yahoo, Alpha Vantage, etc.)
+- **Additional Providers**: Easy to add more providers (Alpha Vantage, Polygon, etc.)
 - **WebSocket Support**: Real-time streaming for supported providers
 - **Metrics Collection**: Provider performance monitoring
-- **Smart Provider Selection**: Automatic provider selection based on ticker types
-
-## Backward Compatibility
-
-✅ **Fully backward compatible** - existing Finnhub implementation continues to work
-✅ **Zero frontend changes** - same API contracts maintained
-✅ **Gradual migration** - switch providers without deployment
-✅ **Fallback support** - automatic failover for reliability
+- **Smart Selection**: Automatic provider selection based on ticker types

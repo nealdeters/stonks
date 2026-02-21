@@ -50,6 +50,10 @@ export const syncStockData = async (event) => {
             key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
             scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
         });
+        
+        console.log("[StockData] Auth email:", process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL);
+        console.log("[StockData] Key length:", process.env.GOOGLE_PRIVATE_KEY?.length);
+        console.log("[StockData] Key starts with:", process.env.GOOGLE_PRIVATE_KEY?.substring(0, 30));
 
         const ranges = [
             getRange(SHEETS.CONTESTANTS),
@@ -81,12 +85,12 @@ export const syncStockData = async (event) => {
         sheetData.contestants.forEach(c => delete c.email);
         sheetData.users.forEach(u => delete u.email);
 
-        // Extract unique tickers from contestants, benchmarks, and historical records
+        // Extract unique tickers from contestants and benchmarks only
+        // Historical records are stored in Google Sheets and don't need API updates
         const contestantTickers = sheetData.contestants.map(c => c.ticker).filter(Boolean);
         const benchmarkTickers = sheetData.benchmarks.map(b => b.ticker).filter(Boolean);
-        const historicalTickers = sheetData.records.map(r => r.ticker).filter(Boolean);
         
-        const allTickers = [...new Set([...contestantTickers, ...benchmarkTickers, ...historicalTickers])];
+        const allTickers = [...new Set([...contestantTickers, ...benchmarkTickers])];
         
         console.log(`[StockData] Fetching data for ${allTickers.length} tickers using ${providerFactory.getProvider().providerName} provider`);
 
@@ -127,43 +131,18 @@ export const syncStockData = async (event) => {
 };
 
 /**
- * Fetch market data using adapter pattern with fallback support
+ * Fetch market data using adapter pattern with provider chain
  * @param {Array<string>} tickers - Array of ticker symbols
  * @param {ProviderFactory} providerFactory - Provider factory instance
  * @returns {Promise<Object>} Market data results
  */
 async function fetchMarketData(tickers, providerFactory) {
     try {
-        // Get current market status
+        // Get current market status - uses primary provider (no chain)
         const marketStatus = await providerFactory.getMarketStatus();
         
-        // Get quotes for all tickers with primary provider
+        // Get quotes - provider chain handles fallback automatically
         let prices = await providerFactory.getQuotes(tickers);
-        
-        // Identify failed tickers (price = 0 or error)
-        const failedTickers = prices
-            .filter(price => price.error || price.price === 0)
-            .map(price => price.ticker);
-        
-        // Per-ticker fallback: retry failed tickers with fallback provider
-        const fallbackProvider = providerFactory.getFallbackProvider();
-        if (failedTickers.length > 0 && fallbackProvider) {
-            console.log(`[StockData] Retrying ${failedTickers.length} failed tickers with fallback provider`);
-            
-            const fallbackPrices = await fallbackProvider.getQuotes(failedTickers);
-            
-            // Merge fallback results into prices array
-            const fallbackMap = new Map(fallbackPrices.map(p => [p.ticker, p]));
-            prices = prices.map(price => {
-                if (price.error || price.price === 0) {
-                    const fallback = fallbackMap.get(price.ticker);
-                    if (fallback && fallback.price > 0) {
-                        return { ...fallback, provider: `${providerFactory.getProvider().providerName}->${fallbackProvider.providerName}` };
-                    }
-                }
-                return price;
-            });
-        }
         
         // Build stock names mapping from successful quotes
         const stockNames = {};

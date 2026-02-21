@@ -102,7 +102,11 @@ class MarketDataAdapter {
   handleError(error, context = '') {
     console.error(`[${this.providerName}] Error in ${context}:`, error.message);
     
+    const tickerMatch = context.match(/getQuote\(([^)]+)\)/);
+    const ticker = tickerMatch ? tickerMatch[1] : undefined;
+    
     return {
+      ticker,
       error: true,
       message: error.message,
       context,
