@@ -1,79 +1,44 @@
+/**
+ * Stock Data Sync Service with Adapter Pattern
+ * Supports multiple market data providers (Finnhub, AllTick)
+ * Maintains backward compatibility with existing data contracts
+ */
 import axios from 'axios';
 import { JWT } from 'google-auth-library';
 import googleSheetsPkg from '@googleapis/sheets';
 import { Redis } from '@upstash/redis';
 import { SHEETS, getRange, parseRows } from '../../src/utils/helpers.js';
+import { ProviderFactory } from './adapters/provider-factory.js';
+import { getAdapterConfig } from './adapter-config.js';
 
 const googleSheets = googleSheetsPkg.default || googleSheetsPkg;
 
+// Initialize provider factory with configuration
+const initializeProviderFactory = () => {
+  const factory = new ProviderFactory();
+  const config = getAdapterConfig();
+  
+  factory.initialize(config);
+  
+  return factory;
+};
+
 export const syncStockData = async (event) => {
-    console.log("Starting scheduled sync...");
+    console.log("Starting scheduled sync with adapter pattern...");
+    
+    let providerFactory;
     
     try {
-        const API_BASE_URL = "https://finnhub.io/api/v1";
-        const API_KEY = process.env.FINNHUB_KEY;
+        // Initialize provider factory
+        providerFactory = initializeProviderFactory();
+        
         const SHEET_ID = process.env.SHEET_ID;
-
-        const fetchAllData = async (tickers, apiKey) => {
-            const config = { timeout: 8000 }; // 8s timeout to prevent Lambda kill
-            const marketStatusReq = axios.get(`${API_BASE_URL}/stock/market-status?exchange=US&token=${apiKey}`, config);
-            const symbolListReq = axios.get(`${API_BASE_URL}/stock/symbol?exchange=US&token=${apiKey}`, config);
-
-            const priceReqs = tickers.map(t => 
-                axios.get(`${API_BASE_URL}/quote?symbol=${t}&token=${apiKey}`, config)
-            );
-
-            const [statusRes, symbolsRes, ...priceResults] = await Promise.all([
-                marketStatusReq,
-                symbolListReq,
-                ...priceReqs
-            ]);
-
-            const { isOpen, holiday } = statusRes.data;
-            const allSymbols = symbolsRes.data; 
-            
-            const prices = priceResults.map((res, i) => ({
-                ticker: tickers[i],
-                price: res.data.c,
-                dp: res.data.dp,
-                name: allSymbols.find(s => s.symbol === tickers[i])?.description || 'Unknown'
-            }));
-
-            return {
-                isMarketOpen: isOpen,
-                holidayName: holiday,
-                prices,
-                allSymbols
-            };
-        };
-
-        const deriveWinners = (records) => {
-            const winnersMap = {};
-            records.forEach(record => {
-                const year = record.year;
-                if (!year) return;
-                
-                if (!winnersMap[year]) winnersMap[year] = { year };
-                
-                const place = parseInt(record.place);
-                if (place === 1) {
-                    winnersMap[year].first_user_name = record.name;
-                    winnersMap[year].first_user_uuid = record.user_uuid;
-                    winnersMap[year].ticker = record.ticker;
-                    winnersMap[year].return = record.percent_gain;
-                } else if (place === 2) {
-                    winnersMap[year].second_user_name = record.name;
-                    winnersMap[year].second_user_uuid = record.user_uuid;
-                } else if (place === 3) {
-                    winnersMap[year].third_user_name = record.name;
-                    winnersMap[year].third_user_uuid = record.user_uuid;
-                }
-            });
-            return Object.values(winnersMap).sort((a, b) => b.year - a.year);
-        };
-
+        
         if (!process.env.GOOGLE_PRIVATE_KEY) throw new Error("Missing GOOGLE_PRIVATE_KEY");
         if (!process.env.UPSTASH_REDIS_REST_URL) throw new Error("Missing UPSTASH_REDIS_REST_URL");
+        if (!process.env.FINNHUB_KEY && !process.env.ALLTICK_KEY) {
+            throw new Error("Missing API key: FINNHUB_KEY or ALLTICK_KEY required");
+        }
 
         const redis = new Redis({
             url: process.env.UPSTASH_REDIS_REST_URL,
@@ -116,31 +81,163 @@ export const syncStockData = async (event) => {
         sheetData.contestants.forEach(c => delete c.email);
         sheetData.users.forEach(u => delete u.email);
 
-        const tickers = [...new Set([...sheetData.contestants.map(c => c.ticker), ...sheetData.benchmarks.map(b => b.ticker)])].filter(Boolean);
-
-        const { isMarketOpen, prices, allSymbols } = await fetchAllData(tickers, API_KEY);
-
-        const historicalTickers = sheetData.records.map(r => r.ticker);
-        const uniqueTickers = [...new Set([...tickers, ...historicalTickers])].filter(Boolean);
+        // Extract unique tickers from contestants, benchmarks, and historical records
+        const contestantTickers = sheetData.contestants.map(c => c.ticker).filter(Boolean);
+        const benchmarkTickers = sheetData.benchmarks.map(b => b.ticker).filter(Boolean);
+        const historicalTickers = sheetData.records.map(r => r.ticker).filter(Boolean);
         
-        const stockNames = {};
-        if (allSymbols) {
-            uniqueTickers.forEach(t => {
-                const upperT = t.toUpperCase();
-                const match = allSymbols.find(s => s.symbol === upperT);
-                if (match) stockNames[upperT] = match.description;
-            });
-        }
+        const allTickers = [...new Set([...contestantTickers, ...benchmarkTickers, ...historicalTickers])];
+        
+        console.log(`[StockData] Fetching data for ${allTickers.length} tickers using ${providerFactory.getProvider().providerName} provider`);
 
-        const payload = { sheetData, prices, isMarketOpen, stockNames, lastUpdated: Date.now() };
+        // Use adapter pattern to fetch market data with fallback support
+        const { isMarketOpen, prices, stockNames } = await fetchMarketData(allTickers, providerFactory);
+
+        const payload = { 
+            sheetData, 
+            prices, 
+            isMarketOpen, 
+            stockNames, 
+            lastUpdated: Date.now(),
+            provider: providerFactory.getProvider().providerName
+        };
         
         await redis.set('STOCK_DASHBOARD_DATA', payload, { ex: 900 });
 
-        console.log("Sync complete.");
+        console.log(`[StockData] Sync complete using ${providerFactory.getProvider().providerName} provider`);
         return { statusCode: 200, body: "Sync complete" };
 
     } catch (err) {
-        console.error("Sync Error:", err);
-        return { statusCode: 500, body: JSON.stringify({ error: err.message, stack: err.stack }) };
+        console.error("[StockData] Sync Error:", err);
+        
+        // Log provider information if available
+        if (providerFactory) {
+            console.error("[StockData] Provider health:", providerFactory.getProviderHealth());
+        }
+        
+        return { 
+            statusCode: 500, 
+            body: JSON.stringify({ 
+                error: err.message, 
+                stack: err.stack,
+                provider: providerFactory?.getProvider()?.providerName || 'unknown'
+            }) 
+        };
     }
 };
+
+/**
+ * Fetch market data using adapter pattern with fallback support
+ * @param {Array<string>} tickers - Array of ticker symbols
+ * @param {ProviderFactory} providerFactory - Provider factory instance
+ * @returns {Promise<Object>} Market data results
+ */
+async function fetchMarketData(tickers, providerFactory) {
+    try {
+        // Get current market status
+        const marketStatus = await providerFactory.getMarketStatus();
+        
+        // Get quotes for all tickers with primary provider
+        let prices = await providerFactory.getQuotes(tickers);
+        
+        // Identify failed tickers (price = 0 or error)
+        const failedTickers = prices
+            .filter(price => price.error || price.price === 0)
+            .map(price => price.ticker);
+        
+        // Per-ticker fallback: retry failed tickers with fallback provider
+        const fallbackProvider = providerFactory.getFallbackProvider();
+        if (failedTickers.length > 0 && fallbackProvider) {
+            console.log(`[StockData] Retrying ${failedTickers.length} failed tickers with fallback provider`);
+            
+            const fallbackPrices = await fallbackProvider.getQuotes(failedTickers);
+            
+            // Merge fallback results into prices array
+            const fallbackMap = new Map(fallbackPrices.map(p => [p.ticker, p]));
+            prices = prices.map(price => {
+                if (price.error || price.price === 0) {
+                    const fallback = fallbackMap.get(price.ticker);
+                    if (fallback && fallback.price > 0) {
+                        return { ...fallback, provider: `${providerFactory.getProvider().providerName}->${fallbackProvider.providerName}` };
+                    }
+                }
+                return price;
+            });
+        }
+        
+        // Build stock names mapping from successful quotes
+        const stockNames = {};
+        prices.forEach(price => {
+            if (price.ticker && price.name && price.name !== price.ticker) {
+                stockNames[price.ticker] = price.name;
+            }
+        });
+
+        // Filter out error responses
+        const validPrices = prices.filter(price => !price.error && price.price > 0);
+        
+        // Log any failed tickers
+        const stillFailed = prices.filter(price => price.error || price.price === 0);
+        if (stillFailed.length > 0) {
+            console.warn(`[StockData] Failed to fetch data for ${stillFailed.length} tickers:`, 
+                stillFailed.map(p => p.ticker || 'unknown'));
+        }
+
+        console.log(`[StockData] Successfully fetched data for ${validPrices.length}/${tickers.length} tickers`);
+
+        return {
+            isMarketOpen: marketStatus.isOpen || false,
+            prices: validPrices,
+            stockNames
+        };
+
+    } catch (error) {
+        console.error("[StockData] Market data fetch failed:", error);
+        
+        // Return fallback data to prevent complete failure
+        return {
+            isMarketOpen: false,
+            prices: tickers.map(ticker => ({
+                ticker,
+                price: 0,
+                dp: 0,
+                name: ticker,
+                provider: providerFactory.getProvider().providerName,
+                error: true
+            })),
+            stockNames: {}
+        };
+    }
+}
+
+/**
+ * Derive winners from contest records
+ * @param {Array<Object>} records - Contest records
+ * @returns {Array<Object>} Winners by year
+ */
+function deriveWinners(records) {
+    const winnersMap = {};
+    
+    records.forEach(record => {
+        const year = record.year;
+        if (!year) return;
+        
+        if (!winnersMap[year]) winnersMap[year] = { year };
+        
+        const place = parseInt(record.place);
+        if (place === 1) {
+            winnersMap[year].first_user_name = record.name;
+            winnersMap[year].first_user_uuid = record.user_uuid;
+            winnersMap[year].ticker = record.ticker;
+            winnersMap[year].return = record.percent_gain;
+        } else if (place === 2) {
+            winnersMap[year].second_user_name = record.name;
+            winnersMap[year].second_user_uuid = record.user_uuid;
+        } else if (place === 3) {
+            winnersMap[year].third_user_name = record.name;
+            winnersMap[year].third_user_uuid = record.user_uuid;
+        }
+    });
+    
+    return Object.values(winnersMap).sort((a, b) => b.year - a.year);
+}

@@ -8,7 +8,10 @@ node_modules/
 # Build outputs
 dist/
 .netlify/
+.opencode/
 
 # OS Metadata
 .DS_Store
 Thumbs.db
+# Local Netlify folder
+.netlify
