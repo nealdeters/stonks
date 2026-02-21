@@ -15,39 +15,20 @@ const GOOGLE_SCOPES = [
 export async function getGoogleAuth() {
     let privateKey = process.env.GOOGLE_PRIVATE_KEY || '';
     
-    console.log('[Auth] Raw key length:', privateKey.length);
-    console.log('[Auth] Key starts with:', privateKey.substring(0, 50).replace(/\n/g, '\\n'));
-    console.log('[Auth] Contains literal \\\\n:', privateKey.includes('\\n'));
-    console.log('[Auth] Contains actual newline:', privateKey.includes('\n'));
+    // Handle key format - Netlify may store multiline keys with literal \n
+    if (privateKey.includes('\\n')) {
+        privateKey = privateKey.replace(/\\n/g, '\n').replace(/\\r/g, '\r');
+    }
     
-    // Handle various key formats:
-    // Replace literal \n with actual newlines
-    privateKey = privateKey.replace(/\\n/g, '\n').replace(/\\r/g, '\r');
-    
-    console.log('[Auth] After replacement, starts with:', privateKey.substring(0, 50));
-    
-    // Ensure proper PEM format
     if (!privateKey.includes('-----BEGIN')) {
-        console.error('[Auth] Key format issue - does not contain BEGIN marker');
         throw new Error('Private key does not appear to be in PEM format');
     }
     
-    try {
-        const auth = new JWT({
-            email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-            key: privateKey,
-            scopes: GOOGLE_SCOPES,
-        });
-        
-        // Force token refresh to test auth works
-        await auth.getAccessToken();
-        console.log('[Auth] JWT created and token obtained successfully');
-        
-        return auth;
-    } catch (err) {
-        console.error('[Auth] JWT creation failed:', err.message);
-        throw err;
-    }
+    return new JWT({
+        email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        key: privateKey,
+        scopes: GOOGLE_SCOPES,
+    });
 }
 
 /**
@@ -61,13 +42,18 @@ export async function getSheetsClient() {
 
 /**
  * Validate required environment variables for Google Sheets access
- * @throws {Error} If required env vars are missing
+ * @param {boolean} throwOnMissing - Whether to throw if vars are missing (default: true)
+ * @throws {Error} If required env vars are missing and throwOnMissing=true
  */
-export function validateGoogleEnvVars() {
-    const required = ['GOOGLE_SERVICE_ACCOUNT_EMAIL', 'GOOGLE_PRIVATE_KEY', 'SHEET_ID'];
-    const missing = required.filter(key => !process.env[key]);
+export function validateGoogleEnvVars(throwOnMissing = true) {
+    const requiredVars = ['GOOGLE_SERVICE_ACCOUNT_EMAIL', 'GOOGLE_PRIVATE_KEY', 'SHEET_ID'];
+    const missing = requiredVars.filter(key => !process.env[key]);
     
     if (missing.length > 0) {
-        throw new Error(`Missing required env vars: ${missing.join(', ')}`);
+        if (throwOnMissing) {
+            throw new Error(`Missing required env vars: ${missing.join(', ')}`);
+        }
+        return false;
     }
+    return true;
 }

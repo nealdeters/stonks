@@ -57,6 +57,22 @@ vi.mock('google-auth-library', () => ({
     JWT: vi.fn().mockImplementation(() => ({}))
 }));
 
+// Mock auth module
+vi.mock('../../netlify/lib/auth.js', () => ({
+    getSheetsClient: vi.fn().mockResolvedValue({
+        spreadsheets: {
+            values: {
+                get: (...args) => mockGet(...args),
+                batchGet: (...args) => mockBatchGet(...args),
+                update: (...args) => mockUpdate(...args),
+                append: (...args) => mockAppend(...args),
+                clear: (...args) => mockClear(...args)
+            }
+        }
+    }),
+    validateGoogleEnvVars: vi.fn()
+}));
+
 describe('Scheduled Functions', () => {
     const originalEnv = process.env;
 

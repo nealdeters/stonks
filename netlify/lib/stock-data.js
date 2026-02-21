@@ -43,10 +43,6 @@ export const syncStockData = async (event) => {
 
         validateGoogleEnvVars();
         const sheets = await getSheetsClient();
-        
-        console.log("[StockData] Auth email:", process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL);
-        console.log("[StockData] Key length:", process.env.GOOGLE_PRIVATE_KEY?.length);
-        console.log("[StockData] Key starts with:", process.env.GOOGLE_PRIVATE_KEY?.substring(0, 30));
 
         const ranges = [
             getRange(SHEETS.CONTESTANTS),

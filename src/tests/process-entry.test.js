@@ -11,6 +11,19 @@ vi.mock('google-auth-library', () => ({
     }))
 }));
 
+// Mock auth module
+vi.mock('../../netlify/lib/auth.js', () => ({
+    getSheetsClient: vi.fn().mockResolvedValue({
+        spreadsheets: {
+            values: {
+                batchGet: (...args) => mockBatchGet(...args),
+                append: (...args) => mockAppend(...args)
+            }
+        }
+    }),
+    validateGoogleEnvVars: vi.fn()
+}));
+
 // Mock Google Sheets
 const mockAppend = vi.fn();
 const mockBatchGet = vi.fn();
