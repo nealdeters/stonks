@@ -3,6 +3,7 @@ import { JWT } from 'google-auth-library';
 import googleSheetsPkg from '@googleapis/sheets';
 import { Redis } from '@upstash/redis';
 import { SHEETS, getRange, parseRows } from '../../src/utils/helpers.js';
+import FinnhubAdapter from './adapters/finnhub-adapter.js';
 
 const googleSheets = googleSheetsPkg.default || googleSheetsPkg;
 
@@ -10,26 +11,19 @@ export const syncNews = async (event) => {
     console.log("Starting news sync...");
     
     try {
-        const API_BASE_URL = "https://finnhub.io/api/v1";
         const API_KEY = process.env.FINNHUB_KEY;
         const SHEET_ID = process.env.SHEET_ID;
 
-        const fetchNews = async (tickers, apiKey) => {
-            const to = new Date().toISOString().split('T')[0];
-            const fromDate = new Date();
-            fromDate.setDate(fromDate.getDate() - 3);
-            const from = fromDate.toISOString().split('T')[0];
+        if (!API_KEY) {
+            throw new Error("FINNHUB_KEY is required for news");
+        }
 
-            const uniqueTickers = [...new Set(tickers)].filter(Boolean).slice(0, 15);
+        const finnhub = new FinnhubAdapter({ apiKey: API_KEY });
 
-            const newsReqs = uniqueTickers.map(t => 
-                axios.get(`${API_BASE_URL}/company-news?symbol=${t}&from=${from}&to=${to}&token=${apiKey}`, { timeout: 8000 })
-                    .catch(e => ({ data: [] }))
-            );
-
-            const results = await Promise.all(newsReqs);
-            return results.flatMap((r, i) => r.data.map(n => ({ ...n, ticker: uniqueTickers[i] }))).sort((a, b) => b.datetime - a.datetime);
-        };
+        const to = new Date().toISOString().split('T')[0];
+        const fromDate = new Date();
+        fromDate.setDate(fromDate.getDate() - 3);
+        const from = fromDate.toISOString().split('T')[0];
 
         if (!process.env.GOOGLE_PRIVATE_KEY) throw new Error("Missing GOOGLE_PRIVATE_KEY");
         if (!process.env.UPSTASH_REDIS_REST_URL) throw new Error("Missing UPSTASH_REDIS_REST_URL");
@@ -53,9 +47,24 @@ export const syncNews = async (event) => {
         
         const contestants = parseRows(response.data.valueRanges[0]);
         const controls = parseRows(response.data.valueRanges[1])[0] || {};
-        const tickers = contestants.map(c => c.ticker).filter(Boolean);
+        const uniqueTickers = [...new Set(contestants.map(c => c.ticker).filter(Boolean))].slice(0, 15);
 
-        const news = await fetchNews(tickers, API_KEY);
+        // Fetch news using Finnhub adapter
+        const newsResults = [];
+        for (const ticker of uniqueTickers) {
+            try {
+                const articles = await finnhub.getCompanyNews(ticker, from, to);
+                if (articles.length > 0) {
+                    newsResults.push(...articles.map(a => ({ ...a, ticker })));
+                }
+            } catch (e) {
+                console.warn(`[News] Failed to get news for ${ticker}:`, e.message);
+            }
+        }
+
+        const news = newsResults
+            .sort((a, b) => b.datetime - a.datetime)
+            .slice(0, 100);
         
         await redis.set('STOCK_NEWS_DATA', { news, controls, lastUpdated: Date.now() }, { ex: 3600 });
 
