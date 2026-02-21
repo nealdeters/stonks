@@ -1,9 +1,6 @@
 import { Resend } from 'resend';
-import { JWT } from 'google-auth-library';
-import googleSheetsPkg from '@googleapis/sheets';
 import { SHEETS, getRange, isRegistrationClosed } from '../../src/utils/helpers.js';
-
-const googleSheets = googleSheetsPkg.default || googleSheetsPkg;
+import { getSheetsClient, validateGoogleEnvVars } from './auth.js';
 
 export const sendReminder = async (event) => {
     const force = event.queryStringParameters?.force === 'true';
@@ -11,20 +8,17 @@ export const sendReminder = async (event) => {
     
     try {
         const API_KEY = process.env.RESEND_API_KEY;
-        const SHEET_ID = process.env.SHEET_ID;
-        const APP_SECRET = process.env.APP_SECRET;
 
-        const auth = new JWT({
-            email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-            key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-            scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-        });
+        if (!API_KEY) {
+            return { statusCode: 500, body: "Missing RESEND_API_KEY" };
+        }
 
-        const sheets = googleSheets.sheets({ version: 'v4', auth });
+        validateGoogleEnvVars();
+        const sheets = await getSheetsClient();
         const resend = new Resend(API_KEY);
 
         const controlsRes = await sheets.spreadsheets.values.get({ 
-            spreadsheetId: SHEET_ID, range: getRange(SHEETS.CONTROLS) 
+            spreadsheetId: process.env.SHEET_ID, range: getRange(SHEETS.CONTROLS) 
         });
         const controlRows = controlsRes.data.values || [];
         const headersControl = controlRows[0];
@@ -42,7 +36,7 @@ export const sendReminder = async (event) => {
         } else {
             const ranges = [getRange(SHEETS.USERS), getRange(SHEETS.CONTESTANTS)]
             const data = await sheets.spreadsheets.values.batchGet({
-                spreadsheetId: SHEET_ID,
+                spreadsheetId: process.env.SHEET_ID,
                 ranges: ranges,
             });
 
@@ -77,7 +71,7 @@ export const sendReminder = async (event) => {
                     <h2 style="color: #a78bfa;">The ${title} is back!</h2>
                     <p>We noticed you haven't submitted your entry for this year's contest yet.</p>
                     <p><strong>Registration Cutoff:</strong> ${controls.cutoff}</p>
-                    <p><strong>Access Secret:</strong> ${APP_SECRET}</p>
+                    <p><strong>Access Secret:</strong> ${process.env.APP_SECRET}</p>
                     <div style="margin: 30px 0;">
                         <a href="${process.env.SITE_URL}" style="background: #a78bfa; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Enter Now</a>
                     </div>

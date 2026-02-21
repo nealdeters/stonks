@@ -1,27 +1,17 @@
 import axios from 'axios';
-import { JWT } from 'google-auth-library';
-import googleSheetsPkg from '@googleapis/sheets';
 import { SHEETS, getRange, parseRows } from '../../src/utils/helpers.js';
-
-const googleSheets = googleSheetsPkg.default || googleSheetsPkg;
+import { getSheetsClient, validateGoogleEnvVars } from './auth.js';
 
 export const finalizeContest = async (event) => {
     const force = event.queryStringParameters?.force === 'true';
     console.log(`Checking for contest finalization... (Force: ${force})`);
     
     try {
-        const SHEET_ID = process.env.SHEET_ID;
-        const API_KEY = process.env.FINNHUB_KEY;
-
-        const auth = new JWT({
-            email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-            key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-            scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-        });
-        const sheets = googleSheets.sheets({ version: 'v4', auth });
+        validateGoogleEnvVars();
+        const sheets = await getSheetsClient();
 
         const controlsRes = await sheets.spreadsheets.values.get({
-            spreadsheetId: SHEET_ID,
+            spreadsheetId: process.env.SHEET_ID,
             range: getRange(SHEETS.CONTROLS),
         });
         
@@ -42,7 +32,7 @@ export const finalizeContest = async (event) => {
         }
 
         const contestantsRes = await sheets.spreadsheets.values.get({
-            spreadsheetId: SHEET_ID,
+            spreadsheetId: process.env.SHEET_ID,
             range: getRange(SHEETS.CONTESTANTS)
         });
         const contestants = parseRows(contestantsRes.data);
@@ -86,14 +76,14 @@ export const finalizeContest = async (event) => {
         ]);
 
         await sheets.spreadsheets.values.append({
-            spreadsheetId: SHEET_ID,
+            spreadsheetId: process.env.SHEET_ID,
             range: getRange(SHEETS.RECORDS),
             valueInputOption: 'USER_ENTERED',
             resource: { values: archiveRows }
         });
 
         await sheets.spreadsheets.values.clear({
-            spreadsheetId: SHEET_ID,
+            spreadsheetId: process.env.SHEET_ID,
             range: `${SHEETS.CONTESTANTS}!A2:Z` 
         });
 

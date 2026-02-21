@@ -1,10 +1,9 @@
 import axios from 'axios';
-import { JWT } from 'google-auth-library';
-import googleSheets from '@googleapis/sheets';
 import crypto from 'crypto';
 import { SHEETS, getRange, isRegistrationClosed, isContestEntryOpen } from '../../src/utils/helpers.js';
 import { ProviderFactory } from '../lib/adapters/provider-factory.js';
 import { getAdapterConfig } from '../lib/adapter-config.js';
+import { getSheetsClient, validateGoogleEnvVars } from '../lib/auth.js';
 
 const HEADERS = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
 const INVESTMENT = 5000;
@@ -20,7 +19,6 @@ export const handler = async (event) => {
 
         const { name, email, ticker, secret } = formData;
         
-        const SHEET_ID = process.env.SHEET_ID;
         const APP_SECRET = process.env.APP_SECRET;
 
         if (!secret || secret !== APP_SECRET) {
@@ -31,14 +29,9 @@ export const handler = async (event) => {
             };
         }
 
-        // Initialize Auth inside try/catch to handle missing env vars gracefully
-        const auth = new JWT({
-            email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-            key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
-            scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-        });
-
-        const sheets = googleSheets.sheets({ version: 'v4', auth });
+        validateGoogleEnvVars();
+        const sheets = await getSheetsClient();
+        
         const ranges = [
             getRange(SHEETS.USERS),
             getRange(SHEETS.CONTESTANTS),
@@ -46,7 +39,7 @@ export const handler = async (event) => {
         ];
 
         const data = await sheets.spreadsheets.values.batchGet({
-            spreadsheetId: SHEET_ID,
+            spreadsheetId: process.env.SHEET_ID,
             ranges: ranges
         });
 
@@ -85,7 +78,7 @@ export const handler = async (event) => {
         if (!userUuid) {
             userUuid = crypto.randomUUID();
             await sheets.spreadsheets.values.append({
-                spreadsheetId: SHEET_ID,
+                spreadsheetId: process.env.SHEET_ID,
                 range: getRange(SHEETS.USERS),
                 valueInputOption: 'USER_ENTERED',
                 resource: { values: [[userUuid, name, email]] }
@@ -133,7 +126,7 @@ export const handler = async (event) => {
         const shares = INVESTMENT / price;
 
         await sheets.spreadsheets.values.append({
-            spreadsheetId: SHEET_ID,
+            spreadsheetId: process.env.SHEET_ID,
             range: getRange(SHEETS.CONTESTANTS),
             valueInputOption: 'USER_ENTERED',
             resource: { values: [[userUuid, name, email, ticker.toUpperCase(), INVESTMENT, price, shares]] }

@@ -3,15 +3,11 @@
  * Supports multiple market data providers (Finnhub, AllTick)
  * Maintains backward compatibility with existing data contracts
  */
-import axios from 'axios';
-import { JWT } from 'google-auth-library';
-import googleSheetsPkg from '@googleapis/sheets';
 import { Redis } from '@upstash/redis';
 import { SHEETS, getRange, parseRows } from '../../src/utils/helpers.js';
 import { ProviderFactory } from './adapters/provider-factory.js';
 import { getAdapterConfig } from './adapter-config.js';
-
-const googleSheets = googleSheetsPkg.default || googleSheetsPkg;
+import { getSheetsClient, validateGoogleEnvVars } from './auth.js';
 
 // Initialize provider factory with configuration
 const initializeProviderFactory = () => {
@@ -45,11 +41,8 @@ export const syncStockData = async (event) => {
             token: process.env.UPSTASH_REDIS_REST_TOKEN,
         });
 
-        const auth = new JWT({
-            email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-            key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-            scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-        });
+        validateGoogleEnvVars();
+        const sheets = await getSheetsClient();
         
         console.log("[StockData] Auth email:", process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL);
         console.log("[StockData] Key length:", process.env.GOOGLE_PRIVATE_KEY?.length);
@@ -64,7 +57,6 @@ export const syncStockData = async (event) => {
             getRange(SHEETS.RECORDS),
         ];
 
-        const sheets = googleSheets.sheets({ version: 'v4', auth });
         const response = await sheets.spreadsheets.values.batchGet({
             spreadsheetId: SHEET_ID,
             ranges,
