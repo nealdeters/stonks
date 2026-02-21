@@ -3,6 +3,8 @@ import { JWT } from 'google-auth-library';
 import googleSheets from '@googleapis/sheets';
 import crypto from 'crypto';
 import { SHEETS, getRange, isRegistrationClosed, isContestEntryOpen } from '../../src/utils/helpers.js';
+import { ProviderFactory } from '../lib/adapters/provider-factory.js';
+import { getAdapterConfig } from '../lib/adapter-config.js';
 
 const HEADERS = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
 const INVESTMENT = 5000;
@@ -117,20 +119,16 @@ export const handler = async (event) => {
             }
         }
 
-        const quote = await axios.get(`https://finnhub.io/api/v1/quote?symbol=${ticker.toUpperCase()}&token=${process.env.FINNHUB_KEY}`);
-        const price = quote.data.c;
-        const timestamp = quote.data.t;
-
-        if (!price || price === 0) {
+        const factory = new ProviderFactory();
+        factory.initialize(getAdapterConfig());
+        
+        const quoteResult = await factory.getQuote(ticker.toUpperCase());
+        
+        if (!quoteResult.price || quoteResult.price === 0) {
             return { statusCode: 422, headers: HEADERS, body: JSON.stringify({ error: `Ticker "${ticker}" not found or has no price.` }) };
         }
 
-        const currentYear = new Date().getFullYear();
-        const quoteYear = new Date(timestamp * 1000).getFullYear();
-
-        if (quoteYear < currentYear) {
-             return { statusCode: 422, headers: HEADERS, body: JSON.stringify({ error: "Price is from previous year. Please wait for market open." }) };
-        }
+        const price = quoteResult.price;
 
         const shares = INVESTMENT / price;
 
