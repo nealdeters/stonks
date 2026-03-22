@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import axios from 'axios';
-import { run } from '../../scripts/finalize.js';
+import * as auth from '../../netlify/lib/auth.js';
+import { finalizeContest } from '../../netlify/lib/contest.js';
 
 vi.mock('axios');
-vi.mock('dotenv/config', () => ({}));
 
-describe('finalize.js - Calculation Logic', () => {
+describe('finalizeContest - Calculation Logic', () => {
     
     beforeEach(() => {
         process.env.FINNHUB_KEY = 'mock-key';
@@ -36,7 +36,6 @@ describe('finalize.js - Calculation Logic', () => {
                             return { data: { values: [['end'], ['2000-01-01']] } };
                         }
                         if (params.range.includes('Records')) {
-                             // Script appends to Records, doesn't necessarily read it first, but if it did:
                              return { data: { values: [] } };
                         }
                         return { 
@@ -64,7 +63,10 @@ describe('finalize.js - Calculation Logic', () => {
             }
         };
 
-        await run(mockSheets);
+        vi.spyOn(auth, 'validateGoogleEnvVars').mockImplementation(() => true);
+        vi.spyOn(auth, 'getSheetsClient').mockResolvedValue(mockSheets);
+
+        await finalizeContest({ queryStringParameters: {} });
 
         expect(capturedArchive).not.toBeNull();
         

@@ -1,5 +1,8 @@
 import { isContestOver } from '../../src/utils/helpers.js';
 import axios from 'axios';
+import * as puppeteer from 'puppeteer';
+import chromium from '@sparticuz/chromium'
+import { Resend } from 'resend';
 
 export const sendReport = async (event) => {
     // 1. Extract the params you need
@@ -18,19 +21,18 @@ export const sendReport = async (event) => {
         }
 
         let browser;
-        const puppeteer = (await import('puppeteer-core')).default;
 
         if (isLocal) {
             browser = await puppeteer.launch({
-                executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', 
-                headless: true
+                executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+                headless: true,
             });
         } else {
-            const chromium = (await import('@sparticuz/chromium')).default;
+            const chrome = chromium && (chromium.default || chromium);
             browser = await puppeteer.launch({
-                args: chromium.args,
-                executablePath: await chromium.executablePath(),
-                headless: chromium.headless,
+                args: chrome?.args || [],
+                executablePath: chrome?.executablePath ? await chrome.executablePath() : undefined,
+                headless: chrome?.headless ?? true,
             });
         }
 
@@ -43,7 +45,6 @@ export const sendReport = async (event) => {
         const screenshotBuffer = await page.screenshot({ fullPage: true });
         await browser.close();
 
-        const { Resend } = await import('resend');
         const resend = new Resend(process.env.RESEND_API_KEY);
         const dateStr = new Date().toISOString().split('T')[0];
         

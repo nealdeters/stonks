@@ -18,17 +18,15 @@ vi.mock('@sparticuz/chromium', () => ({
     default: { args: [], defaultViewport: {}, executablePath: vi.fn(), headless: true }
 }));
 
-vi.mock('puppeteer-core', () => ({
-    default: {
-        launch: vi.fn().mockResolvedValue({
-            newPage: vi.fn().mockResolvedValue({
-                setViewport: vi.fn(),
-                goto: vi.fn(),
-                screenshot: vi.fn().mockResolvedValue(Buffer.from('fake-image')),
-            }),
-            close: vi.fn(),
-        })
-    }
+vi.mock('puppeteer', () => ({
+    launch: vi.fn().mockResolvedValue({
+        newPage: vi.fn().mockResolvedValue({
+            setViewport: vi.fn(),
+            goto: vi.fn(),
+            screenshot: vi.fn().mockResolvedValue(Buffer.from('fake-image')),
+        }),
+        close: vi.fn(),
+    })
 }));
 
 const mockBatchGet = vi.fn();

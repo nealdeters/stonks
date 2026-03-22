@@ -7,6 +7,12 @@ export const finalizeContest = async (event) => {
     console.log(`Checking for contest finalization... (Force: ${force})`);
     
     try {
+        const API_KEY = process.env.FINNHUB_KEY;
+
+        if (!API_KEY) {
+            console.error('Missing FINNHUB_KEY');
+            return { statusCode: 500, body: 'Missing FINNHUB_KEY' };
+        }
         validateGoogleEnvVars();
         const sheets = await getSheetsClient();
 

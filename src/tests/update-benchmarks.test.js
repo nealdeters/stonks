@@ -1,12 +1,11 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import axios from 'axios';
-import * as googleSheets from '@googleapis/sheets';
-import { run } from '../../scripts/update-benchmarks.js';
+import * as auth from '../../netlify/lib/auth.js';
+import { updateBenchmarks } from '../../netlify/lib/benchmarks.js';
 
 vi.mock('axios');
-vi.mock('@googleapis/sheets');
 
-describe('Update Benchmarks Script', () => {
+describe('updateBenchmarks lib', () => {
     let originalArgv;
 
     beforeAll(() => {
@@ -30,21 +29,20 @@ describe('Update Benchmarks Script', () => {
             data: { values: [['cutoff'], ['2099-12-31']] }
         });
 
-        vi.mocked(googleSheets.sheets).mockReturnValue({
-            spreadsheets: { values: { get: getSpy } }
-        });
+        const mockSheets = { spreadsheets: { values: { get: getSpy } } };
+
+        vi.spyOn(auth, 'validateGoogleEnvVars').mockImplementation(() => true);
+        vi.spyOn(auth, 'getSheetsClient').mockResolvedValue(mockSheets);
 
         const logSpy = vi.spyOn(console, 'log');
 
-        await run();
+        await updateBenchmarks({ queryStringParameters: {} });
 
         expect(getSpy).toHaveBeenCalledTimes(1);
         expect(logSpy.mock.calls.some(c => c[0].includes('not the cutoff date'))).toBe(true);
     });
 
     it('Proceeds if force flag is present regardless of date', async () => {
-        process.argv = [...originalArgv, '--force'];
-
         const getSpy = vi.fn().mockImplementation(async (params) => {
             if (params.range.includes('Controls')) return { data: { values: [['cutoff'], ['2099-12-31']] } };
             if (params.range.includes('Benchmarks')) {
@@ -54,14 +52,15 @@ describe('Update Benchmarks Script', () => {
 
         const updateSpy = vi.fn().mockResolvedValue({});
 
-        vi.mocked(googleSheets.sheets).mockReturnValue({
-            spreadsheets: { values: { get: getSpy, update: updateSpy } }
-        });
+        const mockSheets = { spreadsheets: { values: { get: getSpy, update: updateSpy } } };
+
+        vi.spyOn(auth, 'validateGoogleEnvVars').mockImplementation(() => true);
+        vi.spyOn(auth, 'getSheetsClient').mockResolvedValue(mockSheets);
 
         vi.mocked(axios.get).mockResolvedValue({ data: { c: 150 } });
         const logSpy = vi.spyOn(console, 'log');
 
-        await run();
+        await updateBenchmarks({ queryStringParameters: { force: 'true' } });
 
         expect(logSpy.mock.calls.some(c => c[0].includes('Force override enabled'))).toBe(true);
         expect(updateSpy).toHaveBeenCalledTimes(1);
@@ -82,13 +81,14 @@ describe('Update Benchmarks Script', () => {
 
         const updateSpy = vi.fn().mockResolvedValue({});
 
-        vi.mocked(googleSheets.sheets).mockReturnValue({
-            spreadsheets: { values: { get: getSpy, update: updateSpy } }
-        });
+        const mockSheets = { spreadsheets: { values: { get: getSpy, update: updateSpy } } };
+
+        vi.spyOn(auth, 'validateGoogleEnvVars').mockImplementation(() => true);
+        vi.spyOn(auth, 'getSheetsClient').mockResolvedValue(mockSheets);
 
         vi.mocked(axios.get).mockResolvedValue({ data: { c: 155 } });
 
-        await run();
+        await updateBenchmarks({ queryStringParameters: {} });
 
         expect(updateSpy).toHaveBeenCalledTimes(1);
         const values = updateSpy.mock.calls[0][0].resource.values;
@@ -96,8 +96,6 @@ describe('Update Benchmarks Script', () => {
     });
 
     it('Handles missing benchmarks gracefully', async () => {
-        process.argv = [...originalArgv, '--force'];
-
         const getSpy = vi.fn().mockImplementation(async (params) => {
             if (params.range.includes('Controls')) return { data: { values: [['cutoff'], ['2099-12-31']] } };
             if (params.range.includes('Benchmarks')) {
@@ -105,23 +103,19 @@ describe('Update Benchmarks Script', () => {
             }
         });
 
-        vi.mocked(googleSheets.sheets).mockReturnValue({
-            spreadsheets: { values: { get: getSpy } }
-        });
+        const mockSheets = { spreadsheets: { values: { get: getSpy } } };
+
+        vi.spyOn(auth, 'validateGoogleEnvVars').mockImplementation(() => true);
+        vi.spyOn(auth, 'getSheetsClient').mockResolvedValue(mockSheets);
 
         const logSpy = vi.spyOn(console, 'log');
 
-        await run();
+        await updateBenchmarks({ queryStringParameters: { force: 'true' } });
 
         expect(logSpy.mock.calls.some(c => c[0].includes('No benchmarks found'))).toBe(true);
     });
 
     it('Exits if benchmark headers are invalid', async () => {
-        process.argv = [...originalArgv, '--force'];
-        
-        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {});
-        vi.spyOn(console, 'error').mockImplementation(() => {});
-
         const getSpy = vi.fn().mockImplementation(async (params) => {
             if (params.range.includes('Controls')) return { data: { values: [['cutoff'], ['2099-12-31']] } };
             if (params.range.includes('Benchmarks')) {
@@ -129,12 +123,15 @@ describe('Update Benchmarks Script', () => {
             }
         });
 
-        vi.mocked(googleSheets.sheets).mockReturnValue({
-            spreadsheets: { values: { get: getSpy, update: async () => {} } }
-        });
+        const mockSheets = { spreadsheets: { values: { get: getSpy, update: async () => {} } } };
 
-        await run();
+        vi.spyOn(auth, 'validateGoogleEnvVars').mockImplementation(() => true);
+        vi.spyOn(auth, 'getSheetsClient').mockResolvedValue(mockSheets);
 
-        expect(exitSpy).toHaveBeenCalledWith(1);
+        const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        const res = await updateBenchmarks({ queryStringParameters: { force: 'true' } });
+
+        expect(res.statusCode).toBe(500);
     });
 });

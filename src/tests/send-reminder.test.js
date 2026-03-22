@@ -1,14 +1,11 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
-import googleSheets from '@googleapis/sheets';
+import * as auth from '../../netlify/lib/auth.js';
 import { Resend } from 'resend';
-import { run } from '../../scripts/send-reminder.js';
+import { sendReminder } from '../../netlify/lib/reminders.js';
 
-vi.mock('@googleapis/sheets');
-vi.mock('resend', () => ({
-    Resend: vi.fn()
-}));
+vi.mock('resend', () => ({ Resend: vi.fn() }));
 
-describe('Contest Reminder Script', () => {
+describe('sendReminder lib', () => {
     beforeAll(() => {
         process.env.RESEND_API_KEY = 're_test_123';
         process.env.SHEET_ID = 'test_sheet_id';
@@ -18,47 +15,41 @@ describe('Contest Reminder Script', () => {
     });
 
     beforeEach(() => {
-        process.argv = ['node', 'scripts/send-reminder.js'];
         vi.clearAllMocks();
     });
 
     it('Filters out already registered users and sends to pending only', async () => {
-        vi.mocked(googleSheets.sheets).mockReturnValue({
+        const mockSheets = {
             spreadsheets: {
                 values: {
-                    get: async () => ({
-                        data: { values: [['title', 'cutoff'], ['Schultz Cup', '2099-12-31']] }
-                    }),
+                    get: async () => ({ data: { values: [['title', 'cutoff'], ['Schultz Cup', '2099-12-31']] } }),
                     batchGet: async () => ({
                         data: {
                             valueRanges: [
-                                { 
-                                    values: [
-                                        ['id', 'name', 'email'],
-                                        ['1', 'Neal', 'neal@test.com'],
-                                        ['2', 'Kirana', 'kirana@test.com'],
-                                        ['3', 'Oliver', 'oliver@test.com']
-                                    ] 
-                                },
-                                { 
-                                    values: [
-                                        ['uuid', 'name', 'email', 'ticker'],
-                                        ['1', 'Neal', 'neal@test.com', 'AAPL']
-                                    ] 
-                                }
+                                { values: [
+                                    ['id', 'name', 'email'],
+                                    ['1', 'Neal', 'neal@test.com'],
+                                    ['2', 'Kirana', 'kirana@test.com'],
+                                    ['3', 'Oliver', 'oliver@test.com']
+                                ] },
+                                { values: [
+                                    ['uuid', 'name', 'email', 'ticker'],
+                                    ['1', 'Neal', 'neal@test.com', 'AAPL']
+                                ] }
                             ]
                         }
                     })
                 }
             }
-        });
+        };
+
+        vi.spyOn(auth, 'validateGoogleEnvVars').mockImplementation(() => true);
+        vi.spyOn(auth, 'getSheetsClient').mockResolvedValue(mockSheets);
 
         const sendSpy = vi.fn().mockResolvedValue({ data: { id: 'ok' } });
-        vi.mocked(Resend).mockImplementation(() => ({
-            emails: { send: sendSpy }
-        }));
+        vi.mocked(Resend).mockImplementation(() => ({ emails: { send: sendSpy } }));
 
-        await run();
+        const res = await sendReminder({ queryStringParameters: {} });
 
         expect(sendSpy).toHaveBeenCalledTimes(1);
         const callArgs = sendSpy.mock.calls[0][0];
@@ -69,5 +60,6 @@ describe('Contest Reminder Script', () => {
         expect(callArgs.to).not.toContain('neal@test.com');
         
         expect(callArgs.subject).toContain('Schultz Cup');
+        expect(res.statusCode).toBe(200);
     });
 });
