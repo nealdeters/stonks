@@ -5,8 +5,8 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
-  external_node_modules = ["@sparticuz/chromium"]
-  included_files = ["src/utils/**", "node_modules/@sparticuz/chromium/**"]
+  external_node_modules = ["@sparticuz/chromium", "resend", "puppeteer"]
+  included_files = ["src/utils/**", "node_modules/@sparticuz/chromium/**", "node_modules/resend/**", "node_modules/puppeteer/**"]
 
 [[redirects]]
   from = "/api/*"

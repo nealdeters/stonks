@@ -7,6 +7,12 @@ export const updateBenchmarks = async (event) => {
     console.log(`Starting benchmark update... (Force: ${force})`);
     
     try {
+        const API_KEY = process.env.FINNHUB_KEY;
+
+        if (!API_KEY) {
+            console.error('Missing FINNHUB_KEY');
+            return { statusCode: 500, body: 'Missing FINNHUB_KEY' };
+        }
         validateGoogleEnvVars();
         const sheets = await getSheetsClient();
 
@@ -31,6 +37,9 @@ export const updateBenchmarks = async (event) => {
                 console.log(`Today (${today}) is not the cutoff date (${cutoff}). Skipping.`);
                 return { statusCode: 200, body: "Skipped: Not cutoff date" };
             }
+        }
+        else {
+            console.log('Force override enabled. Ignoring date check.');
         }
 
         // 2. Get Benchmarks
