@@ -1,5 +1,6 @@
 import { isContestOver } from '../../src/utils/helpers.js';
 import axios from 'axios';
+import puppeteer from 'puppeteer';
 
 export const sendReport = async (event) => {
     // 1. Extract the params you need
@@ -18,12 +19,11 @@ export const sendReport = async (event) => {
         }
 
         let browser;
-        const puppeteer = (await import('puppeteer-core')).default;
 
         if (isLocal) {
             browser = await puppeteer.launch({
-                executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', 
-                headless: true
+                executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+                headless: true,
             });
         } else {
             const chromium = (await import('@sparticuz/chromium')).default;
