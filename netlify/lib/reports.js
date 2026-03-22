@@ -13,37 +13,51 @@ export const sendReport = async (event) => {
     console.log(`Starting report generation... (Force: ${force}, ManualTo: ${manualTo})`);
 
     try {
-        const response = await axios.get(`${process.env.SITE_URL}/.netlify/functions/fetch-data`);
+        console.log('Fetching sheet data...');
+        const response = await axios.get(`${process.env.SITE_URL}/.netlify/functions/fetch-data`, { timeout: 15000 });
+        console.log('Fetch complete');
         const sheetData = response.data.sheetData;
         if (sheetData?.controls?.end && isContestOver(new Date(), sheetData.controls.end)) {
-            console.log("Contest ended. Skipping report.");
-            return { statusCode: 200, body: "Contest ended" };
+            console.log('Contest ended. Skipping report.');
+            return { statusCode: 200, body: 'Contest ended' };
         }
 
         let browser;
+        let screenshotBuffer;
 
-        if (isLocal) {
-            browser = await puppeteer.launch({
-                executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-                headless: true,
-            });
-        } else {
-            const chrome = chromium && (chromium.default || chromium);
-            browser = await puppeteer.launch({
-                args: chrome?.args || [],
-                executablePath: chrome?.executablePath ? await chrome.executablePath() : undefined,
-                headless: chrome?.headless ?? true,
-            });
+        try {
+            console.log('Launching browser...');
+            if (isLocal) {
+                browser = await puppeteer.launch({
+                    executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+                    headless: 'new',
+                });
+            } else {
+                const chrome = chromium && (chromium.default || chromium);
+                browser = await puppeteer.launch({
+                    args: chrome?.args || [],
+                    executablePath: chrome?.executablePath ? await chrome.executablePath() : undefined,
+                    headless: chrome?.headless ?? 'new',
+                });
+            }
+            console.log('Browser launched');
+
+            const page = await browser.newPage();
+            await page.setViewport({ width: 1920, height: 1080 });
+            console.log('Navigating to site for screenshot...');
+            // use a sensible timeout and less-strict idle condition to avoid hanging
+            await page.goto(process.env.SITE_URL, { waitUntil: 'networkidle2', timeout: 30000 });
+            console.log('Page loaded');
+            await new Promise(r => setTimeout(r, 1500));
+
+            console.log('Capturing screenshot...');
+            screenshotBuffer = await page.screenshot({ fullPage: true });
+            console.log('Screenshot captured');
+        } finally {
+            if (browser) {
+                try { await browser.close(); console.log('Browser closed'); } catch (err) { console.warn('Error closing browser', err); }
+            }
         }
-
-        const page = await browser.newPage();
-        await page.setViewport({ width: 1920, height: 1080 });
-        await page.goto(process.env.SITE_URL, { waitUntil: 'networkidle0' });
-        
-        await new Promise(r => setTimeout(r, 3000));
-
-        const screenshotBuffer = await page.screenshot({ fullPage: true });
-        await browser.close();
 
         const resend = new Resend(process.env.RESEND_API_KEY);
         const dateStr = new Date().toISOString().split('T')[0];
