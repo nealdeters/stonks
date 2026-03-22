@@ -25,8 +25,17 @@ describe('sendReport lib', () => {
     it('Sends report to manual recipients using query param', async () => {
         const fakeBuffer = Buffer.from('pngdata');
 
-        // Mock fetch-data axios call
-        vi.mocked(axios.get).mockResolvedValue({ data: { sheetData: { contestants: [{ email: 'neal@test.com' }], controls: { title: 'Schultz Cup' } } } });
+        // Mock Google Sheets batchGet (contestants + controls)
+        vi.spyOn(auth, 'getSheetsClient').mockResolvedValue({
+            spreadsheets: {
+                values: {
+                    batchGet: vi.fn().mockResolvedValue({ data: { valueRanges: [
+                        { values: [['user_uuid','name','email'], ['1','Neal','neal@test.com']] },
+                        { values: [['title','end'], ['Schultz Cup','2099-12-31']] }
+                    ] } })
+                }
+            }
+        });
 
         // Mock puppeteer browser/page
         const page = { setViewport: vi.fn(), goto: vi.fn(), screenshot: vi.fn().mockResolvedValue(fakeBuffer) };

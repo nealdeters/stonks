@@ -77,9 +77,9 @@ export const syncStockData = async (event) => {
         // Historical records are stored in Google Sheets and don't need API updates
         const contestantTickers = sheetData.contestants.map(c => c.ticker).filter(Boolean);
         const benchmarkTickers = sheetData.benchmarks.map(b => b.ticker).filter(Boolean);
-        
+
         const allTickers = [...new Set([...contestantTickers, ...benchmarkTickers])];
-        
+
         console.log(`[StockData] Fetching data for ${allTickers.length} tickers using ${providerFactory.getProvider().providerName} provider`);
 
         // Use adapter pattern to fetch market data with fallback support

@@ -137,10 +137,11 @@ describe('Scheduled Functions', () => {
 
     describe('sendReport', () => {
         it('sends report with attachment', async () => {
-            // Mock fetch-data response for contest check
-            vi.mocked(axios.get).mockResolvedValue({ 
-                data: { sheetData: { controls: { end: '2099-12-31' } } } 
-            });
+            // Mock Google Sheets batchGet response for contestants and controls
+            mockBatchGet.mockResolvedValue({ data: { valueRanges: [
+                { values: [['user_uuid','name','email','ticker','capital','cost','shares'], ['1','Tester','test@test.com','TEAM','5000','118.56','42.17']] },
+                { values: [['end'], ['2099-12-31']] }
+            ] } });
 
             const result = await sendReport({ queryStringParameters: { force: 'true', to: 'test@test.com' } });
             
@@ -149,9 +150,10 @@ describe('Scheduled Functions', () => {
         });
 
         it('skips if contest is over', async () => {
-            vi.mocked(axios.get).mockResolvedValue({ 
-                data: { sheetData: { controls: { end: '2000-01-01' } } } 
-            });
+            mockBatchGet.mockResolvedValue({ data: { valueRanges: [
+                { values: [['user_uuid','name','email'], ['1','Old','old@test.com']] },
+                { values: [['end'], ['2000-01-01']] }
+            ] } });
 
             const result = await sendReport({ queryStringParameters: {} });
             expect(result.body).toBe('Contest ended');

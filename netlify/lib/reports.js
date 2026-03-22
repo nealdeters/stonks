@@ -1,8 +1,8 @@
-import { isContestOver } from '../../src/utils/helpers.js';
-import axios from 'axios';
+import { isContestOver, getRange, parseRows, SHEETS } from '../../src/utils/helpers.js';
 import * as puppeteer from 'puppeteer';
 import chromium from '@sparticuz/chromium'
 import { Resend } from 'resend';
+import { getSheetsClient, validateGoogleEnvVars } from './auth.js';
 
 export const sendReport = async (event) => {
     // 1. Extract the params you need
@@ -13,11 +13,15 @@ export const sendReport = async (event) => {
     console.log(`Starting report generation... (Force: ${force}, ManualTo: ${manualTo})`);
 
     try {
-        console.log('Fetching sheet data...');
-        const response = await axios.get(`${process.env.SITE_URL}/.netlify/functions/fetch-data`, { timeout: 15000 });
-        console.log('Fetch complete');
-        const sheetData = response.data.sheetData;
-        if (sheetData?.controls?.end && isContestOver(new Date(), sheetData.controls.end)) {
+        console.log('Fetching contestants and controls directly from Google Sheets...');
+        validateGoogleEnvVars();
+        const sheets = await getSheetsClient();
+        const ranges = [getRange(SHEETS.CONTESTANTS), getRange(SHEETS.CONTROLS)];
+        const response = await sheets.spreadsheets.values.batchGet({ spreadsheetId: process.env.SHEET_ID, ranges });
+        const contestants = parseRows(response.data.valueRanges[0]);
+        const controls = parseRows(response.data.valueRanges[1])[0] || {};
+
+        if (controls?.end && isContestOver(new Date(), controls.end)) {
             console.log('Contest ended. Skipping report.');
             return { statusCode: 200, body: 'Contest ended' };
         }
@@ -64,7 +68,9 @@ export const sendReport = async (event) => {
         const _d = new Date();
         const dateStr = `${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}-${_d.getFullYear()}`;
 
-        const recipients = manualTo ? manualTo.split(',').map(e => e.trim()) : sheetData?.contestants?.map(c => c.email) || [];
+        const recipients = manualTo
+            ? manualTo.split(',').map(e => e.trim()).filter(Boolean)
+            : (contestants || []).map(c => c.email).filter(Boolean);
 
         console.log('Recipients:', recipients);
         if (!recipients[0]) {
@@ -72,7 +78,7 @@ export const sendReport = async (event) => {
             return { statusCode: 500, body: 'No recipients defined' };
         }
 
-        const title = sheetData?.controls?.title || 'Stonks';
+        const title = controls?.title || 'Stonks';
 
         console.log('Sending report to', recipients.join(', '));
         try {
