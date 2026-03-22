@@ -60,34 +60,48 @@ export const sendReport = async (event) => {
         }
 
         const resend = new Resend(process.env.RESEND_API_KEY);
-        const dateStr = new Date().toISOString().split('T')[0];
-        
+        // format date as MM-DD-YYYY
+        const _d = new Date();
+        const dateStr = `${String(_d.getMonth() + 1).padStart(2, '0')}-${String(_d.getDate()).padStart(2, '0')}-${_d.getFullYear()}`;
+
         const recipients = manualTo ? manualTo.split(',').map(e => e.trim()) : sheetData?.contestants?.map(c => c.email) || [];
 
+        console.log('Recipients:', recipients);
         if (!recipients[0]) {
-            return { statusCode: 500, body: "No recipients defined" };
+            console.error('No recipients defined; aborting send');
+            return { statusCode: 500, body: 'No recipients defined' };
         }
 
-        const title = sheetData?.controls?.title || "Stonks";
+        const title = sheetData?.controls?.title || 'Stonks';
 
-        await resend.emails.send({
-            from: `${title} Report <reports@resend.dev>`,
-            to: recipients,
-            subject: `${title} Leaderboard Report - ${dateStr}`,
-            html: `
-                <p>Here is the latest leaderboard snapshot for <strong>${dateStr}</strong>.</p>
-                <img src="cid:leaderboard" style="width: 100%; max-width: 800px; border: 1px solid #eee;" />
-            `,
-            attachments: [
-                {
-                    filename: `leaderboard-${dateStr}.png`,
-                    content: screenshotBuffer,
-                    cid: 'leaderboard'
-                },
-            ],
-        });
+        console.log('Sending report to', recipients.join(', '));
+        try {
+            await Promise.race([
+                resend.emails.send({
+                    from: `${title} Report <reports@resend.dev>`,
+                    to: recipients,
+                    subject: `${title} Leaderboard Report - ${dateStr}`,
+                    html: `
+                        <p>Here is the latest leaderboard snapshot for <strong>${dateStr}</strong>.</p>
+                        <img src="cid:leaderboard" style="width: 100%; max-width: 800px; border: 1px solid #eee;" />
+                    `,
+                    attachments: [
+                        {
+                            filename: `leaderboard-${dateStr}.png`,
+                            content: screenshotBuffer,
+                            cid: 'leaderboard'
+                        },
+                    ],
+                }),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Resend timeout')), 20000))
+            ]);
 
-        return { statusCode: 200, body: `Report sent to ${recipients.join(', ')}` };
+            console.log('Report send succeeded');
+            return { statusCode: 200, body: `Report sent to ${recipients.join(', ')}` };
+        } catch (err) {
+            console.error('Report send failed', err);
+            return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+        }
 
     } catch (error) {
         console.error("Report generation failed:", error);
