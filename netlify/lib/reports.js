@@ -4,6 +4,39 @@ import chromium from '@sparticuz/chromium'
 import { Resend } from 'resend';
 import { getSheetsClient, validateGoogleEnvVars } from './auth.js';
 
+/**
+ * Resolve Resend `from` address.
+ * Prefer env RESEND_FROM:
+ *   - full string: `Schultz Cup Report <reports@schultzcup.com>`
+ *   - or just an email: `reports@schultzcup.com` (wrapped with `${title} Report <…>`)
+ * If unset, falls back to testing-only `reports@resend.dev` (same title pattern).
+ * Production: verify the domain in Resend and set RESEND_FROM on each Netlify site.
+ */
+export const resolveResendFrom = (title) => {
+    const envFrom = (process.env.RESEND_FROM || '').trim();
+    if (!envFrom) {
+        console.warn(
+            'RESEND_FROM is unset; using testing-only reports@resend.dev. ' +
+            'Verify your domain in Resend and set RESEND_FROM on the Netlify site for production.'
+        );
+        return `${title} Report <reports@resend.dev>`;
+    }
+    if (envFrom.includes('<') && envFrom.includes('>')) {
+        return envFrom;
+    }
+    return `${title} Report <${envFrom}>`;
+};
+
+const formatResendError = (err) => {
+    if (err == null) return String(err);
+    if (typeof err === 'string') return err;
+    try {
+        return JSON.stringify(err, Object.getOwnPropertyNames(err), 2);
+    } catch {
+        return String(err);
+    }
+};
+
 export const sendReport = async (event) => {
     // 1. Extract the params you need
     const force = event.queryStringParameters?.force === 'true';
@@ -79,12 +112,13 @@ export const sendReport = async (event) => {
         }
 
         const title = controls?.title || 'Stonks';
+        const from = resolveResendFrom(title);
 
-        console.log('Sending report to', recipients.join(', '));
+        console.log('Sending report from', from, 'to', recipients.join(', '));
         try {
-            await Promise.race([
+            const sendResult = await Promise.race([
                 resend.emails.send({
-                    from: `${title} Report <reports@resend.dev>`,
+                    from,
                     to: recipients,
                     subject: `${title} Leaderboard Report - ${dateStr}`,
                     html: `
@@ -102,10 +136,23 @@ export const sendReport = async (event) => {
                 new Promise((_, reject) => setTimeout(() => reject(new Error('Resend timeout')), 20000))
             ]);
 
-            console.log('Report send succeeded');
+            // Resend SDK v2 returns { data, error } instead of throwing on API failures (e.g. 403).
+            const apiError = sendResult?.error;
+            if (apiError) {
+                console.error('Resend API failure — full error body:', formatResendError(apiError));
+                return {
+                    statusCode: 500,
+                    body: JSON.stringify({
+                        error: apiError.message || apiError.error || 'Resend API error',
+                        resend: apiError,
+                    }),
+                };
+            }
+
+            console.log('Report send succeeded', sendResult?.data ? { id: sendResult.data.id } : '');
             return { statusCode: 200, body: `Report sent to ${recipients.join(', ')}` };
         } catch (err) {
-            console.error('Report send failed', err);
+            console.error('Report send failed — full error body:', formatResendError(err));
             return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
         }
 
